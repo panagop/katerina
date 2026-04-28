@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 
 from elcentro_loader import load_elcentro
 
+
 G = 9.81  # m/s²
 
 
@@ -166,6 +167,50 @@ def save_spectrum_plot(spectrum: ResponseSpectrum, filename: Path) -> None:
     plt.close(fig)
 
 
+def save_spectrum_to_excel(spectrum: ResponseSpectrum, filename: Path) -> None:
+    """Export response spectra to an Excel file."""
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+    except ImportError:
+        raise ImportError(
+            "openpyxl is required for Excel export. "
+            "Install it with: pip install openpyxl"
+        )
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Response Spectra"
+
+    # Header styling
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF")
+
+    headers = ["Period (s)", "Sa pseudo (g)", "Sa true (g)", "Sv pseudo (cm/s)", "Sv true (cm/s)", "Sd (cm)"]
+    for col_idx, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_idx)
+        cell.value = header
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    # Data rows
+    for row_idx, T in enumerate(spectrum.periods, 2):
+        ws.cell(row=row_idx, column=1).value = float(T)
+        ws.cell(row=row_idx, column=2).value = float(spectrum.sa_pseudo[row_idx - 2])
+        ws.cell(row=row_idx, column=3).value = float(spectrum.sa_real[row_idx - 2])
+        ws.cell(row=row_idx, column=4).value = float(spectrum.sv_pseudo[row_idx - 2])
+        ws.cell(row=row_idx, column=5).value = float(spectrum.sv_real[row_idx - 2])
+        ws.cell(row=row_idx, column=6).value = float(spectrum.sd[row_idx - 2])
+
+    # Adjust column widths
+    ws.column_dimensions["A"].width = 14
+    for col in "BCDEF":
+        ws.column_dimensions[col].width = 16
+
+    wb.save(filename)
+
+
 def _print_summary(spectrum: ResponseSpectrum) -> None:
     print("Computed elastic response spectrum")
     print(f"  periods: {spectrum.periods.size} values")
@@ -192,6 +237,10 @@ def main() -> None:
     output_path = Path(__file__).parent / "response_spectrum_classic.png"
     save_spectrum_plot(spectrum, output_path)
     print(f"Saved response spectra plot to: {output_path}")
+
+    excel_path = Path(__file__).parent / "response_spectrum_classic.xlsx"
+    save_spectrum_to_excel(spectrum, excel_path)
+    print(f"Saved response spectra data to: {excel_path}")
 
 
 if __name__ == "__main__":
