@@ -11,6 +11,7 @@ ground_accel = data[:, 1]
 ## Εκτύπωση επιταχυνσιογραφήματος σεισμού
 plt.figure(figsize=(15,3))
 plt.plot(data[:,0], data[:,1], color='k')
+plt.title('Επιταχυνσιογράφημα Σεισμού', fontsize=14, fontweight='bold')
 plt.grid()
 plt.show()
 
@@ -18,10 +19,11 @@ plt.show()
 m = 1.0           # Σταθερή μάζα
 ξ = 0.05         # Απόσβεση 5%
 
-# Το dt του σεισμού ! (πρέπει να το ξέρεις!)
+# Το dt του σεισμού ! (πρέπει να το ξέρεις!) εδω το υπολογιζω απο τα δεδομενα του σεισμου 
 t = data[:,0]
 dt = t[1] - t[0]
 dt = round(dt, 5)
+#print(f"Χρονικό βήμα (dt) του σεισμού: {dt} sec")
 
 periods = np.arange(0.00001, 3.00001, 0.05) # Εύρος περιόδων
 max_accelerations = [] 
@@ -87,6 +89,7 @@ for T in periods:
 ## 3. Σχεδιαση
 plt.figure(figsize=(14,5))
 plt.plot(periods, np.array(max_accelerations)/9.81) # κανει τις τιμες σε *g
+plt.title('Φάσμα Απόκρισης Επιταχύνσεων', fontsize=14, fontweight='bold')
 plt.xlabel('Περίοδος (sec)')
 plt.ylabel('Φασματική Επιτάχυνση (g)') # δινει τις τιμες με *g
 plt.grid()
