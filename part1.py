@@ -1,6 +1,7 @@
 import openseespy.opensees as ops
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
 ## Φόρτωση δεδομένων 
 # Υποθέτουμε 2 στήλες: [Χρόνος, Επιτάχυνση]
@@ -25,7 +26,7 @@ dt = t[1] - t[0]
 dt = round(dt, 5)
 #print(f"Χρονικό βήμα (dt) του σεισμού: {dt} sec")
 
-periods = np.arange(0.00001, 3.00001, 0.05) # Εύρος περιόδων
+periods = np.arange(0.00001, 3.00001, 0.01) # Εύρος περιόδων το 0,05 ειναι το βημα των περιόδων, 0.00001 για να αποφύγουμε το μηδέν που θα μας δώσει άπειρη συχνότητα και δυσκαμψία
 max_accelerations = [] 
 
 
@@ -101,3 +102,16 @@ print(f"Το PGA του σεισμού είναι: {pga:.4f} g") #υο μαχ τ
 
 PGA = max_accelerations[0] / 9.81
 print(f"Το PGA του σεισμού είναι: {PGA:.4f} g") #apo fasma gia T=O
+
+
+# Export max_accelerations to Excel (using pandas)
+
+# 1. Βάζουμε τα δεδομένα σε ένα "πλαίσιο" (DataFrame)
+df = pd.DataFrame({
+    'Περίοδος T (sec)': periods,
+    'Επιτάχυνση (g)': np.array(max_accelerations) / 9.81,
+    'Επιτάχυνση (m/s²)': max_accelerations
+})
+
+# 2. Εξάγουμε το DataFrame σε αρχείο Excel
+df.to_excel('my_response_spectrum.xlsx', index=False , float_format="%.5f") #Τα δεδομένα αποθηκεύτηκαν στο my_response_spectrum.xlsx!
