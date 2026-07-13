@@ -27,9 +27,10 @@ dt = t[1] - t[0]
 dt = round(dt, 5)
 print(f"Χρονικό βήμα (dt) του σεισμού: {dt} sec")
 
-#Πινακας περιοδων για να κανω το φασμα αποκρισης, απο 0.00001 sec μεχρι 3 sec με βημα 0.01 sec
-periods = np.arange(0.00001, 3.00001, 0.01) # Εύρος περιόδων το 0,01 ειναι το βημα των περιόδων (το βημα που σαρωνω τα διαφορετικα κτιρια), 0.00001 για να αποφύγουμε το μηδέν που θα μας δώσει άπειρη συχνότητα και δυσκαμψία
-max_accelerations = []  
+#Πινακας περιοδων για να κανω το φασμα αποκρισης, απο 0.00001 sec μεχρι 4 sec με βημα 0.01 sec
+periods = np.arange(0.00001, 4.00001, 0.01) # Εύρος περιόδων το 0,01 ειναι το βημα των περιόδων (το βημα που σαρωνω τα διαφορετικα κτιρια), 0.00001 για να αποφύγουμε το μηδέν που θα μας δώσει άπειρη συχνότητα και δυσκαμψία
+max_accelerations = [] 
+max_displacements = []
 
 
 ## 2. Κύριος Βρόχος
@@ -73,28 +74,48 @@ for T in periods:
 
     
     # Εύρεση μέγιστου..επιταχυνσης Sa
-    max_acc = 0
-    for i in range(len(ground_accel)):  #Για κάθε χρονικό βήμα του σεισμού (από το 0 δευτερόλεπτο μέχρι να τελειώσει
+    max_disp = 0
+    max_accel = 0
+    ground_accel_ms2 = ground_accel*9.81
+    for i in range(len(ground_accel) - 1):  #Για κάθε χρονικό βήμα του σεισμού (από το 0 δευτερόλεπτο μέχρι να τελειώσει
         ops.analyze(1, dt)  #προχώρα την προσομοίωση μπροστά κατά ένα βήμα dt (π.χ. 0.02 sec) και λύσε τις εξισώσεις κίνησης
 
-        a =ops.nodeAccel(2,1) # σχετική επιτάχυνση
-        ag=ground_accel[i] *9.81 
-        aol = a + ag #ολικη επιταχυνση = Σχετική + Επιτάχυνση Εδάφους
-      
+        ΔU =abs(ops.nodeDisp(2,1))
+        A_rel = ops.nodeAccel(2,1)
+        A_abs = A_rel + ground_accel_ms2[i+1]
+        Abs_accel = abs(A_abs)
+       
        #βρες τη μεγαλυτερη
-        if abs(aol) > max_acc:   #Αν η απόλυτη τιμή της επιτάχυνσης είναι h μεγαλύτερη  που έχω δει μέχρι τώρα, τότε κράτα αυτήν
-            max_acc = abs(aol)
-        
-    max_accelerations.append(max_acc) #γεμιζω την αδεια λιστα με τις μεγιστες επιταχυνσεις για καθε περιοδο T
+        if ΔU > max_disp:  
+            max_disp = ΔU
+           
+            #max acceleration
+        if Abs_accel > max_accel:  
+            max_accel = Abs_accel
+           
+    max_displacements.append(max_disp) #γεμιζω την αδεια λιστα με τις μεγιστες επιταχυνσεις για καθε περιοδο T        
+    max_accelerations.append(max_accel)
+   
+##Υπολογισμός Ψευδοφασμάτων (Όπως ορίζει ο EC8)
+Sd = np.array(max_displacements)
+omega = (2 * np.pi) / periods
+PSa= (omega**2) * Sd
+PSa_g = PSa/ 9.81
+Sa=np.array(max_accelerations)
+Sa_g = Sa/9.81
 
 ## 3. Σχεδιαση
 plt.figure(figsize=(14,5))
-plt.plot(periods, np.array(max_accelerations)/9.81) # κανει τις τιμες σε *g
+plt.plot(periods, Sa_g , label='Sa', linewidth=3) 
+plt.plot(periods, PSa_g, label='PSa', color='red', linestyle='--', linewidth=1.5) 
 plt.title('Φάσμα Απόκρισης Επιταχύνσεων', fontsize=14, fontweight='bold')
 plt.xlabel('Περίοδος (sec)')
 plt.ylabel('Φασματική Επιτάχυνση (g)') # δινει τις τιμες με *g
+plt.axis(xmin=0, ymin=0)
+plt.legend()
 plt.grid()
 plt.show()
+
 
 #ΕΛΕΓΧΟΣ
 pga = np.max(np.abs(ground_accel))
@@ -109,8 +130,9 @@ print(f"Το PGA του σεισμού για Τ=0 είναι: {PGA:.4f} g") #ap
 df = pd.DataFrame({
     'Περίοδος T (sec)': periods,
     'Επιτάχυνση (g)': np.array(max_accelerations) / 9.81,
-    'Επιτάχυνση (m/s²)': max_accelerations
+    #'Επιτάχυνση (m/s²)': max_accelerations
+    'ψευδο-Επιτάχυνση PSa_g (g)': PSa_g,
 })
 
 # 2. Εξάγουμε το DataFrame σε αρχείο Excel
-df.to_excel('my_response_spectrum.xlsx', index=False , float_format="%.5f") #Τα δεδομένα αποθηκεύτηκαν στο my_response_spectrum.xlsx!
+df.to_excel('my_response_pseudo_spectrum.xlsx', index=False , float_format="%.5f") #Τα δεδομένα αποθηκεύτηκαν στο my_response_spectrum.xlsx!
