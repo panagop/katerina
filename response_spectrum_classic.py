@@ -102,7 +102,7 @@ def compute_response_spectrum(
         Array of oscillator periods. Defaults to 200 values from 0.01 to 4 s.
     """
     if periods is None:
-        periods = np.linspace(0.01, 4.0, 200)
+        periods = np.linspace(0.01, 3.0, 300)
 
     ag_ms2 = ag_g * G
 
