@@ -98,6 +98,7 @@ plt.title('Φάσμα Απόκρισης Ψευδο-Επιταχύνσεων', f
 plt.xlabel('Περίοδος (sec)')
 plt.ylabel('Φασματική Επιτάχυνση (g)') 
 plt.grid()  
+plt.axis(xmin=0, ymin=0)
 plt.show()
 
 #ΕΛΕΓΧΟΣ

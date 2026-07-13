@@ -6,7 +6,7 @@ from scipy import signal
 
 ## Φόρτωση δεδομένων 
 # Υποθέτουμε 2 στήλες: [Χρόνος, Επιτάχυνση]
-data = np.loadtxt('elcentro.txt') 
+data = np.loadtxt('elcentro.txt') #se g einai
 ground_accel = data[:, 1] 
 #ground_accel = ground_accel / 9.81 # αν οι επιταχ  ειναι σε m/s^2 (αν ειναι πολλ επι g δεν βαζω αυτη την γραμμή) 
 
@@ -78,12 +78,12 @@ for T in periods:
         ops.analyze(1, dt)  #προχώρα την προσομοίωση μπροστά κατά ένα βήμα dt (π.χ. 0.02 sec) και λύσε τις εξισώσεις κίνησης
 
         a =ops.nodeAccel(2,1) # σχετική επιτάχυνση
-        a_tot = a + (ground_accel[i] * 9.81) #ολικη επιταχυνση = Σχετική + Επιτάχυνση Εδάφους
+        a_tot = a + (ground_accel[i] *9.81) #ολικη επιταχυνση = Σχετική + Επιτάχυνση Εδάφους
 
        #βρες τη μεγαλυτερη
         if abs(a_tot) > max_acc:   #Αν η απόλυτη τιμή της επιτάχυνσης είναι h μεγαλύτερη  που έχω δει μέχρι τώρα, τότε κράτα αυτήν
             max_acc = abs(a_tot)
-            
+              
     max_accelerations.append(max_acc) #γεμιζω την αδεια λιστα με τις μεγιστες επιταχυνσεις για καθε περιοδο T
 
 ## 3. Σχεδιαση
@@ -93,6 +93,7 @@ plt.title('Φάσμα Απόκρισης Επιταχύνσεων', fontsize=14,
 plt.xlabel('Περίοδος (sec)')
 plt.ylabel('Φασματική Επιτάχυνση (g)') # δινει τις τιμες με *g
 plt.grid()
+plt.axis(xmin=0, ymin=0)
 plt.show()
 
 #ΕΛΕΓΧΟΣ
