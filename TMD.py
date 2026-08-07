@@ -25,7 +25,7 @@ print(f"Χρονικό βήμα (dt) του σεισμού: {dt} sec")
 t_final = t[-1]
 
 # Δεδομένα Κατασκευής
-m = 1               # Μάζα κατασκευής σε tn δλδ 1000 kg
+m = 1              # Μάζα κατασκευής σε tn δλδ 1000 kg
 T = 0.49            # Περίοδος κατασκευής 
 ω = 2 * np.pi / T   # Κυκλική ιδιοσυχνότητα κατασκευής 
 ξ = 0.02            # Απόσβεση κατασκευής
@@ -111,10 +111,16 @@ u_max_SPOF = np.max(np.abs(u_SPOF))
 u_max_TMD = np.max(np.abs(u_TMD))
 reduction = (u_max_SPOF - u_max_TMD) / u_max_SPOF * 100
 
+#me τη τετραγ τιμη της ριζας RMS = Root Mean Square (Ενεργός Τιμή)
+RMS_SPOF = np.sqrt(np.mean(u_SPOF**2))
+RMS_TMD = np.sqrt(np.mean(u_TMD**2))
+diff_RMS = (RMS_SPOF - RMS_TMD) / RMS_SPOF * 100
+
 print("\n ΑΠΟΤΕΛΕΣΜΑΤΑ ΑΝΑΛΥΣΗΣ")
 print(f"Μέγιστη Μετακίνηση χωρίς TMD : {u_max_SPOF:.4f} m")
 print(f"Μέγιστη Μετακίνηση με TMD    : {u_max_TMD:.4f} m")
-print(f"Ποσοστό Μείωσης              : {reduction:.2f} %")
+print(f"Ποσοστό Μείωσης Μεγιστου        : {reduction:.2f} %")
+print(f"Μείωση Συνολικής Ενέργειας (RMS): {diff_RMS:.2f} %")
 
 u_SPOFnorm = u_SPOF / u_max_SPOF
 u_TMDnorm = u_TMD / u_max_SPOF
