@@ -80,11 +80,11 @@ def TMD_model(with_TMD):
     time_data = []
     disp_data = []
     
-    t_stop = 0.0
-    while t_stop < t_final:
+    t = 0.0
+    while t < t_final:
         ops.analyze(1, dt)
-        t_stop = ops.getTime()
-        time_data.append(t_stop)
+        t = t + dt
+        time_data.append(t)
         disp_data.append(ops.nodeDisp(2, 1)) # Καταγραφή μετακίνησης του κόμβου 2 (Κτίριο)
         
     return np.array(time_data), np.array(disp_data)
@@ -92,6 +92,8 @@ def TMD_model(with_TMD):
 
 t_bild , u_bild = TMD_model(with_TMD=False)  # Χωρίς TMD
 t_tmd  , u_tmd = TMD_model(with_TMD=True)  # Με TMD
+
+P_all = p_hat * np.sin(Ω * t_bild)
 
 #ΣΧΕΔΙΑΣΗ
 plt.figure(figsize=(12, 6))
