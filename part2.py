@@ -99,10 +99,10 @@ for T in periods:
 ##Υπολογισμός Ψευδοφασμάτων (Όπως ορίζει ο EC8)
 Sd = np.array(max_displacements)
 omega = (2 * np.pi) / periods
-PSa= (omega**2) * Sd
-PSa_g = PSa/ 9.81
-Sa=np.array(max_accelerations)
-Sa_g = Sa/9.81
+PSa = (omega**2) * Sd
+PSa_g = PSa / 9.81
+Sa = np.array(max_accelerations)
+Sa_g = Sa / 9.81
 
 ## 3. Σχεδιαση
 plt.figure(figsize=(14,5))
