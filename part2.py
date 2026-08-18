@@ -14,6 +14,7 @@ ground_accel = data[:, 1]
 plt.figure(figsize=(15,3))
 plt.plot(data[:,0], data[:,1], color='k')
 plt.title('Επιταχυνσιογράφημα Σεισμού', fontsize=14, fontweight='bold')
+plt.xlim(0, data[-1,0])
 plt.grid()
 plt.show()
 
@@ -112,6 +113,7 @@ plt.title('Φάσμα Απόκρισης Επιταχύνσεων', fontsize=14,
 plt.xlabel('Περίοδος (sec)')
 plt.ylabel('Φασματική Επιτάχυνση (g)') # δινει τις τιμες με *g
 plt.axis(xmin=0, ymin=0)
+plt.xlim(0, 4)
 plt.legend()
 plt.grid()
 plt.show()
