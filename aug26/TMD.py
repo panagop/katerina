@@ -138,6 +138,7 @@ plt.ylabel('u (m)') # Εδώ το 'm' είναι τυπικό, ουσιαστι�
 plt.xlim(0, 60)
 plt.ylim(-1, 1) # Βάζουμε τα όρια του άξονα Υ όπως στην εικόνα σου
 plt.legend(loc='lower left') # Τοποθέτηση του υπομνήματος κάτω αριστερά
+plt.grid()
 plt.tight_layout()
 plt.show() 
 
