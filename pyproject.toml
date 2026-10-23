@@ -13,4 +13,10 @@ dependencies = [
     "pandas>=2.2.5",
     "openseespy>=3.8.0.0",
     "scipy>=1.17.1",
+    "streamlit>=1.66.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
 ]
