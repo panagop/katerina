@@ -1,0 +1,23 @@
+[project]
+name = "katerina"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "jupyter>=1.1.1",
+    "matplotlib>=3.10.8",
+    "notebook>=7.5.5",
+    "numpy>=2.4.4",
+    "openpyxl>=3.1.5",
+    "pandas>=2.2.5",
+    "openseespy>=3.8.0.0",
+    "scipy>=1.17.1",
+    "streamlit>=1.66.1",
+    "plotly>=7.1.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

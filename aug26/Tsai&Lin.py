@@ -27,15 +27,16 @@ for j in ξ:
 
 # Διαγράμματα (Τίτλοι και Άξονες)
 plt.title('Συντελεστής βέλτιστης συχνότητας συντονισμού για το TMD', fontsize=14, fontweight='bold')
-plt.xlabel('Λόγος Μαζών ($\\tilde{m}$)', fontsize=12)
+plt.xlabel('Λόγος Μαζών (m_hat)', fontsize=12)
 plt.ylabel('Παράμετρος (f)', fontsize=12)
+
 plt.grid(True, which='major', linestyle='-', linewidth=0.8)
 plt.minorticks_on()
 plt.grid(True, which='minor', linestyle=':', alpha=0.6)
+
 plt.xlim(0, 0.1)   
 plt.ylim(0.8, 1)
-plt.xticks(np.arange(0, 0.11, 0.01), fontsize=12)
-plt.yticks(np.arange(0.8, 1.02, 0.02), fontsize=12)
+
 #Προσθήκη υπομνήματος 
 plt.legend(title='Απόσβεση (ξ)', loc='upper right', shadow=True)
 plt.tight_layout()
@@ -56,12 +57,10 @@ for xi in ξ:
 
 # Μορφοποίηση με τις ελάχιστες δυνατές εντολές
 plt.title('Βέλτιστος λόγος απόσβεσης για το TMD', fontweight='bold')
-plt.xlabel('Λόγος Μαζών ($\\tilde{m}$)', fontsize=12)
+plt.xlabel('Λόγος Μαζών (m_hat)', fontsize=12)
 plt.ylabel('ξd', fontsize=12)
 plt.xlim(0, 0.1)
 plt.ylim(0, 0.2)  # Τα όρια του Υ προσαρμοσμένα για το ξ_d
-plt.xticks(np.arange(0, 0.11, 0.01), fontsize=12)
-plt.yticks(np.arange(0, 0.22, 0.02), fontsize=12)
 plt.grid(True, which='major'); plt.minorticks_on(); plt.grid(True, which='minor', linestyle=':')
 plt.legend()
 plt.show()
