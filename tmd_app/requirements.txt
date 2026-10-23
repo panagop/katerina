@@ -1,0 +1,7 @@
+# Εξαρτήσεις για το Streamlit Community Cloud (μόνο ό,τι χρειάζεται η εφαρμογή).
+# Ίδιες εκδόσεις με το uv.lock του repo.
+streamlit==1.66.1
+numpy==2.4.4
+pandas==3.0.5
+plotly==7.1.0
+openseespy==3.8.0.0
