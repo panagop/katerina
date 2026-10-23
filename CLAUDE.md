@@ -35,13 +35,22 @@ through `uv run`. For headless verification: `matplotlib.use('Agg')` and
 
 ## Layout
 
-- **repo root** — earlier assorted scripts (`part1.py`, `part2.py`, `mePSa.py`,
-  response spectra, `TMD*.py`). Loose working files, not a package.
+Restructured in Oct 2026 (agreed with Katerina): no scripts in the repo root.
+Scripts load data by bare relative filename, so they must run from their own
+folder; `.vscode/settings.json` sets `python.terminal.executeInFileDir`.
+
+- **`spectra/`** — her response-spectrum scripts (`part1.py`, `part2.py`,
+  `mePSa.py`, `part1_copy.py`, `part1panag.py`), the accelerograms
+  `elCentro.txt` and `Athens.txt` (Athens 1999), and their `.xlsx` outputs.
+- **`spectra/gp/`** — the supervisor's modular version (`main.py`,
+  `response_spectrum.py`, `response_spectrum_classic.py`, `elcentro_loader.py`
+  reading `data/ELCENTRO`).
 - **`aug26/`** — the TMD work. Her originals `TMD.py` (El Centro) and
   `TMD_harm_excit.py` (harmonic), the reviewed copies `TMD_gp.py` /
   `TMD_harm_excit_gp.py`, `Tsai&Lin.py` (plots of the optimum-tuning formulas),
-  `harmonic excitation.py` (generates `harmonic excitation.txt`), and the data
-  files `elCentro.txt`, `harmonic excitation.txt`.
+  `harmonic excitation.py` (generates `harmonic excitation.txt`), the data
+  files `elCentro.txt`, `harmonic excitation.txt`, and older experiments
+  `TMD_sin.py`, `TMD_dokimi.py` (reads `disp_building.txt`, `disp_tmd.txt`).
 - **`tmd_parametric/`** — refactor of the two `_gp` scripts into functions for
   parametric studies. See its own `README.md`. Modules: `structure.py`,
   `excitation.py`, `analysis.py`, `results.py`, `plots.py`, drivers
