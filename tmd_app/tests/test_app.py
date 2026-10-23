@@ -98,3 +98,24 @@ def test_reversed_range_shows_error_and_keeps_sidebar():
     assert not at.exception
     assert at.error
     assert at.sidebar.subheader, "η σύνοψη χάθηκε (st.stop() στη σελίδα)"
+
+
+def test_mass_ratio_detuning_grid():
+    at = open_page("app_pages/parametric.py")
+    at.number_input(key="grid_m_lo").set_value(0.01)
+    at.number_input(key="grid_m_hi").set_value(0.05)
+    at.number_input(key="grid_m_n").set_value(2)
+    at.number_input(key="grid_r_lo").set_value(0.90)
+    at.number_input(key="grid_r_hi").set_value(1.10)
+    at.number_input(key="grid_r_n").set_value(3)
+    at.form("grid_form").form_submit_button[0].click().run()
+    assert not at.exception
+    df, _ = at.session_state["grid_result"]
+    assert len(df) == 6
+    assert at.get("plotly_chart")
+    # m̂ = 0.01, f/f_opt = 1: η τιμή αναφοράς του El Centro
+    ref = df[(df["m̂"] == 0.01) & (df["f/f_opt"] == 1.0)]
+    assert ref["μείωση_u_max_%"].iloc[0] == pytest.approx(4.48, abs=0.01)
+
+    at.segmented_control(key="grid_z").set_value("διαδρομή_TMD").run()
+    assert not at.exception
