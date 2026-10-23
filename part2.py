@@ -11,9 +11,11 @@ ground_accel = data[:, 1]
 #ground_accel = ground_accel / 9.81 # αν οι επιταχ  ειναι σε m/s^2 (αν ειναι πολλ επι g δεν βαζω αυτη την γραμμή) 
 
 ## Εκτύπωση επιταχυνσιογραφήματος σεισμού
-plt.figure(figsize=(15,3))
+plt.figure(figsize=(14,4))
 plt.plot(data[:,0], data[:,1], color='k')
 plt.title('Επιταχυνσιογράφημα Σεισμού', fontsize=14, fontweight='bold')
+plt.xlabel('Χρόνος (sec)')
+plt.ylabel('Επιτάχυνση (g)')
 plt.xlim(0, data[-1,0])
 plt.grid()
 plt.show()
@@ -110,10 +112,12 @@ plt.figure(figsize=(14,5))
 plt.plot(periods, Sa_g , label='Sa', linewidth=3) 
 plt.plot(periods, PSa_g, label='PSa', color='red', linestyle='--', linewidth=1.5) 
 plt.title('Φάσμα Απόκρισης Επιταχύνσεων', fontsize=14, fontweight='bold')
-plt.xlabel('Περίοδος (sec)')
-plt.ylabel('Φασματική Επιτάχυνση (g)') # δινει τις τιμες με *g
+plt.xlabel('Περίοδος (sec)', fontsize=12)
+plt.ylabel('Φασματική Επιτάχυνση (g)', fontsize=12) # δινει τις τιμες με *g
 plt.axis(xmin=0, ymin=0)
 plt.xlim(0, 4)
+plt.xticks(fontsize=12)
+plt.yticks(fontsize=12)
 plt.legend()
 plt.grid()
 plt.show()
@@ -132,9 +136,10 @@ print(f"Το PGA του σεισμού για Τ=0 είναι: {PGA:.4f} g") #ap
 df = pd.DataFrame({
     'Περίοδος T (sec)': periods,
     'Επιτάχυνση (g)': np.array(max_accelerations) / 9.81,
-    #'Επιτάχυνση (m/s²)': max_accelerations
+    #'Επιτάχυνση (m/s²)': max_accelerations,
     'ψευδο-Επιτάχυνση PSa_g (g)': PSa_g,
 })
 
 # 2. Εξάγουμε το DataFrame σε αρχείο Excel
-df.to_excel('my_response_pseudo_spectrum.xlsx', index=False , float_format="%.5f") #Τα δεδομένα αποθηκεύτηκαν στο my_response_spectrum.xlsx!
+df.to_excel('my_response_(pseudo)_spectrum.xlsx', index=False , float_format="%.5f") #Τα δεδομένα αποθηκεύτηκαν στο my_response_pseudo_spectrum.xlsx!
+df.to_csv('my_response_(pseudo)_spectrum.csv', index=False , float_format="%.5f") #Τα δεδομένα αποθηκεύτηκαν στο my_response_pseudo_spectrum.csv!

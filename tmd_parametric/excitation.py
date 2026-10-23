@@ -8,7 +8,6 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-
 import numpy as np
 
 # Τα αρχεία δεδομένων βρίσκονται στον φάκελο aug26, δίπλα σε αυτόν τον φάκελο.

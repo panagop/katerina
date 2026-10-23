@@ -8,20 +8,27 @@ import pandas as pd
 data = np.loadtxt('harmonic excitation.txt')  #για να παρουμε την επιταχυνση σε m/s^2 διαιρω τη δυναμη με τη μαζα ( Ν / kg = m/s^2)
 ground_sin = data[:, 1] 
 
-
-# Εκτύπωση επιταχυνσιογραφήματος σεισμού
-plt.figure(figsize=(15,3))
-plt.plot(data[:,0], data[:,1], color='k')
-plt.title('Επιταχυνσιογράφημα Σεισμού', fontsize=14, fontweight='bold')
-plt.grid()
-plt.show()
-
 # Το dt του σεισμού(πρέπει να το ξέρω) το υπολογιζω απο τα δεδομενα του σεισμου 
 t = data[:,0]
 dt = t[1] - t[0]
 dt = round(dt, 5)
-print(f"Χρονικό βήμα (dt) του σεισμού: {dt} sec")
-t_final = t[-1]
+n_steps = len(ground_sin) - 1   # πλήθος χρονικών βημάτων (όχι σημείων)
+t_final = n_steps * dt
+print(f"Χρονικό βήμα (dt) της διέγερσης: {dt} sec")
+print(f"Διάρκεια διέγερσης: {t_final} sec ({n_steps} βήματα)")
+
+# Εκτύπωση της ημιτονοειδούς διέγερσης (ζουμ στα πρώτα 5 sec ώστε να φαίνεται το ημίτονο)
+plt.figure(figsize=(15,3))
+plt.plot(data[:,0], data[:,1], color='k')
+plt.title('Ημιτονοειδής Διέγερση Βάσης', fontsize=14, fontweight='bold')
+plt.xlabel('Χρόνος (s)')
+plt.ylabel('Επιτάχυνση (m/s²)')
+plt.xlim(0, 5)
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+
 
 # Δεδομένα Κατασκευής
 m = 1               # Μάζα κατασκευής σε tn δλδ 1000 kg
@@ -105,16 +112,22 @@ t_SPOF , u_SPOF = TMD_model(with_TMD=False)  # Χωρίς TMD
 t_TMD  , u_TMD  = TMD_model(with_TMD=True)   # Με TMD
 
 #ΣΧΕΔΙΑΣΗ
-plt.figure(figsize=(12, 6))
+plt.figure(figsize=(9, 6))
 plt.plot(t_SPOF, u_SPOF, label='Μετακίνηση SDOF (χωρίς TMD) ', color='blue', linewidth=1.5)
 plt.plot(t_TMD, u_TMD, label='Μετακίνηση με TMD ', color='red', linestyle='--', linewidth=1.5)
 
+plt.text(1, 0.73, 
+         'T = 0.45s \n$\\xi$ = 0.02  \n$\\tilde{m}$ = 0.01', 
+         fontsize=12, 
+         bbox=dict(facecolor='white', edgecolor='black', alpha=0.8))
+
 plt.title('Απόκριση Συστήματος σε Ημιτονοειδή Διέγερση', fontweight='bold')
-plt.xlabel('Χρόνος (s)')
-plt.ylabel('Μετακίνηση (m)')
+plt.xlabel('Χρόνος (s)' , fontsize=12)
+plt.ylabel('Μετακίνηση (m)', fontsize=12)
 plt.grid(True, linestyle=':', alpha=0.7)
 plt.legend(loc='upper right')
 plt.xlim(0, t_final)
 plt.ylim(-1, 1)
+plt.yticks(np.arange(-1, 1.2, 0.2), fontsize=12)
 plt.tight_layout()
 plt.show()

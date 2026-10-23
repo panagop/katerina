@@ -5,7 +5,7 @@ import pandas as pd
 
 ## Φόρτωση δεδομένων 
 # Υποθέτουμε 2 στήλες: [Χρόνος, Επιτάχυνση]
-data = np.loadtxt('elCentro.txt') #se g einai
+data = np.loadtxt('elCentro_NS.txt') #se g einai
 ground_accel = data[:, 1] 
 #ground_accel = ground_accel / 9.81 # αν οι επιταχ  ειναι σε m/s^2 (αν ειναι πολλ επι g δεν βαζω αυτη την γραμμή) 
 
@@ -13,6 +13,8 @@ ground_accel = data[:, 1]
 plt.figure(figsize=(15,3))
 plt.plot( data[:,0] , data[:,1] , color='k')
 plt.title('Επιταχυνσιογράφημα Σεισμού', fontsize=14, fontweight='bold')
+plt.xlabel('Χρόνος (s)')
+plt.ylabel('Επιτάχυνση (g)')
 plt.xlim(0, data[-1,0])
 plt.grid()
 plt.show()
@@ -122,15 +124,15 @@ print(f"Μέγιστη Μετακίνηση με TMD    : {u_max_TMD:.4f} m")
 print(f"Ποσοστό Μείωσης Μεγιστου        : {reduction:.2f} %")
 print(f"Μείωση Συνολικής Ενέργειας (RMS): {diff_RMS:.2f} %")
 
-u_SPOFnorm = u_SPOF / u_max_SPOF
-u_TMDnorm = u_TMD / u_max_SPOF
+u_SPOFnorm = u_SPOF /-u_max_SPOF
+u_TMDnorm = u_TMD /-u_max_SPOF
 
 
 # ΣΧΕΔΙΑΣΗ (Τώρα σχεδιάζουμε τα κανονικοποιημένα δεδομένα)
-plt.figure(figsize=(12, 6))
+plt.figure(figsize=(8, 6))
 # Χρησιμοποιούμε μαύρο χρώμα και διακεκομμένη/συνεχή γραμμή για να μοιάζει με το βιβλίο
-plt.plot(t_SPOF, u_SPOFnorm, label='Μετακίνηση SDOF (χωρίς TMD) ', color='blue', linewidth=1.5)
-plt.plot(t_TMD, u_TMDnorm, label='Μετακίνηση με TMD ', color='red', linestyle='--', linewidth=1.5)
+plt.plot(t_SPOF, u_SPOFnorm, label='Μετακίνηση SDOF (χωρίς TMD) ', color='blue', linestyle=':', linewidth=1.5)
+plt.plot(t_TMD, u_TMDnorm, label='Μετακίνηση με TMD ', color='red', linewidth=1.5)
 
 plt.title('Κανονικοποιημενη Απόκριση Συστήματος με ElCentro ', fontweight='bold')
 plt.xlabel('Time (s)')
@@ -139,18 +141,19 @@ plt.xlim(0, 60)
 plt.ylim(-1, 1) # Βάζουμε τα όρια του άξονα Υ όπως στην εικόνα σου
 plt.legend(loc='lower left') # Τοποθέτηση του υπομνήματος κάτω αριστερά
 plt.grid()
+plt.yticks(np.arange(-1.2, 1.4, 0.2), fontsize=12)
 plt.tight_layout()
 plt.show() 
 
 
 #ΣΧΕΔΙΑΣΗ
-plt.figure(figsize=(12, 6))
-plt.plot(t_SPOF, u_SPOF, label='Μετακίνηση SDOF (χωρίς TMD) ', color='blue', linewidth=1.5)
-plt.plot(t_TMD, u_TMD, label='Μετακίνηση με TMD ', color='red', linestyle='--', linewidth=1.5)
+plt.figure(figsize=(9, 6))
+plt.plot(t_SPOF, u_SPOF, label='Μετακίνηση SDOF (χωρίς TMD) ', color='blue', linestyle=':', linewidth=1.5)
+plt.plot(t_TMD, u_TMD, label='Μετακίνηση με TMD ', color='red', linewidth=1.5)
 
 plt.title('Απόκριση Συστήματος σε σεισμική διέγερση elCentro ', fontweight='bold')
-plt.xlabel('Χρόνος (s)')
-plt.ylabel('Μετακίνηση (m)')
+plt.xlabel('Χρόνος (s)', fontsize=12)
+plt.ylabel('Μετακίνηση (m)', fontsize=12)
 plt.grid(True, linestyle=':', alpha=0.7)
 plt.legend(loc='upper right')
 plt.xlim(0, t_final)

@@ -13,6 +13,8 @@ ground_accel = data[:, 1]
 plt.figure(figsize=(15,3))
 plt.plot( data[:,0] , data[:,1] , color='k')
 plt.title('Επιταχυνσιογράφημα Σεισμού', fontsize=14, fontweight='bold')
+plt.xlabel('Χρόνος (s)')
+plt.ylabel('Επιτάχυνση (g)')
 plt.xlim(0, data[-1,0])
 plt.grid()
 plt.show()
