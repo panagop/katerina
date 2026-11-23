@@ -4,23 +4,29 @@ import streamlit as st
 
 import core
 
+#"τραβάει" (μέσω του core) τα τρέχοντα δεδομένα
 structure = core.current_structure()
 tmd = core.current_tmd(structure)
 ground = core.current_excitation(structure)
 
+#εμφανίζει στην οθόνη ένα κυκλάκι που γυρνάει (loading) και γράφει "Ανάλυση στο OpenSees..." για να ξερω οτι υπολογιζει και δεν κολλαει
 with st.spinner("Ανάλυση στο OpenSees..."):
     baseline = core.analyse(structure, ground)
     controlled = core.analyse(structure, ground, tmd)
+ #Όσο γυρνάει το κυκλάκι, τρέχει δύο αναλύσεις: την baseline (σκέτο κτίριο) και την controlled (κτίριο + TMD).   
 
 r = core.results.compare(baseline, controlled)
+#παίρνει τα δύο αποτελέσματα, τα συγκρίνει και φτιάχνει ένα "λεξικό" (το r) που περιέχει όλες τις μειώσεις σε ποσοστά (%), τα μέγιστα (Peak) και τα RMS
 
 # --------------------------------------------------------------------------
 # Αποτελέσματα
 # --------------------------------------------------------------------------
 
+#καπιον στα αριστερα της σελιδας
 st.caption(f"Διέγερση: **{ground.name}**, {len(ground.a)} σημεία, dt = {ground.dt:g} s. "
            f"TMD: m̂ = {tmd.m_hat:g}, f = {tmd.f:.4f}, ξd = {tmd.ξd:.4f}.")
 
+#στο Αναλυση...φτιάχνει 4 εντυπωσιακά κουτάκια (metrics) τοποθετημένα οριζόντια δίπλα-δίπλα
 with st.container(horizontal=True):
     st.metric("u_max χωρίς TMD", f"{r['u_max_χωρίς']:.4f} m", border=True)
     st.metric("u_max με TMD", f"{r['u_max_με']:.4f} m",
@@ -32,6 +38,7 @@ with st.container(horizontal=True):
                    "καθορίζει αν η συσκευή είναι κατασκευάσιμη.",
               border=True)
 
+#στο αναλυση φτιαχνει ενα αναδιομενο μενου σε μορφη πινακα st.table και περιγραφη κατω απο αυτον (st.caption) 
 with st.expander("Όλα τα μεγέθη"):
     st.table(
         {
@@ -48,23 +55,29 @@ with st.expander("Όλα τα μεγέθη"):
                "της κατασκευής. Το πλάτος του τελευταίου 20 % είναι το πλάτος μόνιμης κατάστασης "
                "στην αρμονική διέγερση· στον σεισμό είναι μόνο πληροφοριακό.")
 
+
 # --------------------------------------------------------------------------
 # Χρονοϊστορίες
 # --------------------------------------------------------------------------
 
-df = core.history_frame(baseline, controlled)
 
+df = core.history_frame(baseline, controlled)
+#ενώνει τους χρόνους και τις μετακινήσεις σε έναν πίνακα df baseline (σκέτο κτίριο) και την controlled (κτίριο + TMD)
+
+#Το st.line_chart ζωγραφίζει το γράφημα της χρονοϊστορίας
 st.subheader("Μετακίνηση κατασκευής", anchor=False)
 st.line_chart(df, x="t (s)", y=["u χωρίς TMD (m)", "u με TMD (m)"],
               x_label="Χρόνος (s)", y_label="Μετακίνηση u (m)",
               color=["#9aa0a6", "#d62728"],
               alt="Μετακίνηση της κατασκευής χωρίς και με TMD")
 
+#φτιάχνει ένα δεύτερο γράφημα μόνο για τη Σχετική διαδρομή TMD
 st.subheader("Σχετική διαδρομή TMD", anchor=False)
 st.line_chart(df, x="t (s)", y="διαδρομή TMD (m)",
               x_label="Χρόνος (s)", y_label="u₃ − u₂ (m)",
               alt="Σχετική μετακίνηση της μάζας του TMD")
 
+#Στο τέλος της σελίδας φτιάχνει ένα κουμπί. Αν το πατήσεις, κατεβάζει αυτόματα ένα αρχείο Excel (.csv)
 st.download_button("Λήψη χρονοϊστοριών (csv)", core.to_csv(df),
                    file_name=f"tmd_{ground.name}_mhat{tmd.m_hat:g}.csv",
                    mime="text/csv", icon=":material/download:")

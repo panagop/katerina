@@ -7,6 +7,7 @@ import streamlit as st
 import core
 
 left, right = st.columns(2, gap="large")
+#δυο καθετες στήλες, αριστερά οι παράμετροι της κατασκευής, δεξιά οι παράμετροι του TMD
 
 with left:
     with st.container(border=True):
@@ -23,6 +24,8 @@ with right:
         st.subheader("TMD", anchor=False)
         st.number_input("Λόγος μαζών m̂ = md/m", 0.001, 0.5, key="m_hat", step=0.005,
                         format="%.3f", persist_state="session")
+        #!!!ο διακόπτης st.toggle("Βέλτιστες τιμές Tsai & Lin") ,τα πεδία f (συχνότητα) και ξd (απόσβεση του TMD) με βάση τις εξισώσεις Tsai & Lin 
+        # Αν τον κλείσεις, μπορείς να βάλεις εσύ δικές σου, τυχαίες τιμές!!!! 
         st.toggle("Βέλτιστες τιμές Tsai & Lin", key="tmd_optimum", persist_state="session")
         c1, c2 = st.columns(2)
         manual = not st.session_state.tmd_optimum
@@ -30,6 +33,12 @@ with right:
                         disabled=not manual, persist_state="session")
         c2.number_input("ξd", 0.0, 0.5, key="xid_manual", step=0.005, format="%.4f",
                         disabled=not manual, persist_state="session")
+
+# --------------------------------------------------------------------------
+#Παραμετροι που προκυπτουν
+# --------------------------------------------------------------------------
+#Το OpenSees στο παρασκήνιο δεν καταλαβαίνει τι θα πει "Περίοδος T". Θέλει να του δώσεις συγκεκριμένη σκληρότητα ελατηρίου k σε kN/m και συντελεστή απόσβεσης c
+#Ο κώδικας εδώ παίρνει τα απλά νούμερα που έδωσες πάνω, κάνει τις πράξεις και φτιάχνει δύο αναλυτικούς πίνακες (st.table)
 
 structure = core.current_structure()
 tmd = core.current_tmd(structure)
@@ -56,9 +65,12 @@ if not st.session_state.tmd_optimum:
     st.caption(f"Βέλτιστες τιμές για σύγκριση: f_opt = {f_opt:.4f}, ξd,opt = {xid_opt:.4f} "
                f"(f/f_opt = {tmd.f / f_opt:.3f}).")
 
+#----------------------------------------------------------------------------
+#Βέλτιστες παράμετροι Tsai & Lin
 # Οι σχέσεις Tsai & Lin συναρτήσει του m̂, για το τρέχον ξ (όπως στο Tsai&Lin.py)
 st.subheader("Βέλτιστες παράμετροι Tsai & Lin", anchor=False)
 m_hats = np.linspace(0.001, 0.2, 200)
+#Το πρόγραμμα παίρνει την απόσβεση ξ του κτιρίου σου και δοκιμάζει 200 διαφορετικά σενάρια μάζας για το TMD (np.linspace(0.001, 0.2, 200)), δηλαδή από 0.1% έως 20% της μάζας του κτιρίου.
 curves = pd.DataFrame({
     "m̂": m_hats,
     "f_opt": core.tsai_lin_f(m_hats, structure.ξ),

@@ -67,6 +67,46 @@ def elcentro(path=None) -> Excitation:
         factor=G,
     )
 
+def Athens(path=None) -> Excitation:
+    """Το επιταχυνσιογράφημα Athens (τιμές σε g -> μετατροπή σε m/s^2)."""
+    return load_from_file(
+        path or DATA_DIR / "Athens.txt",
+        name="Athens",
+        factor=9.81,
+    )
+
+def thessaloniki78(path=None) -> Excitation:
+    """Το επιταχυνσιογράφημα Thessaloniki '78 (τιμές σε g -> μετατροπή σε m/s^2)."""
+    return load_from_file(
+        path or DATA_DIR / "thessaloniki78.txt",
+        name="Thessaloniki '78",
+        factor=9.81,
+    )
+
+def mexico95(path=None) -> Excitation:
+    """Το επιταχυνσιογράφημα Mexico '95 (τιμές σε g -> μετατροπή σε m/s^2)."""
+    return load_from_file(
+        path or DATA_DIR / "mexico95.txt",
+        name="Mexico '95",
+        factor=9.81,
+    )
+
+
+def thessaloniki78(path=None) -> Excitation:
+    """Το επιταχυνσιογράφημα Thessaloniki '78 (τιμές σε g -> μετατροπή σε m/s^2)."""
+    return load_from_file(
+        path or DATA_DIR / "thessaloniki78.txt",
+        name="Thessaloniki '78",
+        factor=G,
+    )
+
+def mexico95(path=None) -> Excitation:
+    """Το επιταχυνσιογράφημα Mexico '95 (τιμές σε g -> μετατροπή σε m/s^2)."""
+    return load_from_file(
+        path or DATA_DIR / "mexico95.txt",
+        name="Mexico '95",
+        factor=G,
+    )
 
 def harmonic(structure, rho=1.0, amplitude=None, dt=0.01, duration=60.0) -> Excitation:
     """

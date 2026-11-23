@@ -6,24 +6,28 @@ import streamlit as st
 
 import core
 
+
 SOURCES = ["El Centro", "Αρχείο", "Αρμονική"]
 KIND_TO_SOURCE = {"elcentro": "El Centro", "file": "Αρχείο", "harmonic": "Αρμονική"}
 
 spec = st.session_state.excitation_spec
 structure = core.current_structure()
 
+#Εδώ δημιουργείται ένα οριζόντιο μενού (σαν διακόπτης με 3 κουμπιά
 source = st.segmented_control(
     "Πηγή διέγερσης",
     SOURCES,
-    default=KIND_TO_SOURCE[spec["kind"]],
+    default=KIND_TO_SOURCE[spec["kind"]], #δες πανω το kind_to_source
     required=True,
     key="exc_source",
 )
 
+#αν πατησεις το κουμπί "El Centro" εμφανειζεται στην οθονη
 if source == "El Centro":
     st.caption("Επιταχυνσιογράφημα El Centro (1940, N-S) από το `aug26/elCentro.txt`, τιμές σε g.")
     st.session_state.excitation_spec = {"kind": "elcentro"}
 
+# αν πατησεις το κουμπί "Αρχείο" εμφανίζεται στην οθονη
 elif source == "Αρχείο":
     with st.container(border=True):
         upload = st.file_uploader("Αρχείο επιταχυνσιογραφήματος (.txt, .dat, .csv, .at2)",
@@ -78,11 +82,15 @@ else:  # Αρμονική
 # --------------------------------------------------------------------------
 
 ground = core.current_excitation(structure)
-pga = float(np.max(np.abs(ground.a)))
+
+# Βρίσκουμε το μέγιστο PGA στο αρχικό σύστημα (συνήθως m/s²) και το μετατρέπουμε σε g
+pga_raw = float(np.max(np.abs(ground.a)))
+pga_g = pga_raw / core.exc.G
 
 with st.container(horizontal=True):
-    st.metric("PGA", f"{pga:.3f} m/s²", border=True)
-    st.metric("PGA / g", f"{pga / core.exc.G:.3f}", border=True)
+    # Τώρα τα metrics δείχνουν κατευθείαν g 
+    st.metric("PGA (g)", f"{pga_g:.3f} g", border=True)
+    st.metric("PGA (m/s²)", f"{pga_raw:.3f} m/s²", border=True) # Το κρατάμε βοηθητικά αν θες
     st.metric("dt", f"{ground.dt:g} s", border=True)
     st.metric("Διάρκεια", f"{ground.t_final:.2f} s", border=True)
     st.metric("Σημεία", f"{len(ground.a)}", border=True)
@@ -94,6 +102,18 @@ if ground.dt > T_exc_min / 10:
     st.warning(f"Το dt = {ground.dt:g} s είναι μεγαλύτερο από T/10 = {T_exc_min / 10:.3f} s: "
                "η ολοκλήρωση Newmark θα έχει αισθητό σφάλμα περιόδου.")
 
-df = pd.DataFrame({"t (s)": ground.t, "a_g (m/s²)": ground.a})
-st.line_chart(df, x="t (s)", y="a_g (m/s²)", x_label="Χρόνος (s)", y_label="Επιτάχυνση (m/s²)",
-              alt=f"Επιταχυνσιογράφημα {ground.name}")
+# Μετατροπή ολόκληρου του array της επιτάχυνσης σε g για το γράφημα
+a_in_g = ground.a / core.exc.G
+
+# Φτιάχνουμε το DataFrame με τα δεδομένα σε g
+df = pd.DataFrame({"t (s)": ground.t, "Επιτάχυνση (g)": a_in_g})
+
+# Σχεδιασμός γραφήματος με τους νέους άξονες
+st.line_chart(
+    df, 
+    x="t (s)", 
+    y="Επιτάχυνση (g)", 
+    x_label="Χρόνος (s)", 
+    y_label="Επιτάχυνση (g)",
+    alt=f"Επιταχυνσιογράφημα {ground.name} (σε g)"
+)

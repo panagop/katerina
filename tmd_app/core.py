@@ -20,10 +20,12 @@ import streamlit as st
 PARAM_DIR = Path(__file__).resolve().parent.parent / "tmd_parametric"
 sys.path.insert(0, str(PARAM_DIR))
 
-import excitation as exc  # noqa: E402
-import results  # noqa: E402
-from analysis import run_analysis  # noqa: E402
-from structure import Structure, design_tmd, tsai_lin_f, tsai_lin_xi  # noqa: E402
+# The modules are added to sys.path at runtime; static analyzers don't resolve
+# that dynamic import path unless we silence the missing-import warning.
+import excitation as exc  # type: ignore[reportMissingImports]  # noqa: E402
+import results  # type: ignore[reportMissingImports]  # noqa: E402
+from analysis import run_analysis  # type: ignore[reportMissingImports]  # noqa: E402
+from structure import Structure, design_tmd, tsai_lin_f, tsai_lin_xi  # type: ignore[reportMissingImports]  # noqa: E402
 
 # Συντελεστές μετατροπής σε m/s^2
 UNITS = {
@@ -35,7 +37,6 @@ UNITS = {
 # Το OpenSees κρατά ένα καθολικό μοντέλο ανά διεργασία: δύο ταυτόχρονες
 # αναλύσεις (π.χ. δύο καρτέλες του browser) θα το χαλούσαν.
 _OPS_LOCK = threading.Lock()
-
 
 # --------------------------------------------------------------------------
 # Κατάσταση συνεδρίας
