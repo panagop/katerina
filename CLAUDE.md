@@ -15,6 +15,9 @@ modelled in OpenSeesPy.
   This has been an explicit instruction; assume it still holds.
 - Fixes should preserve her structure and physics, not rewrite the code. She
   needs to recognise it as hers.
+- **`REVIEW_NOTES.md`** (Greek, for Katerina) records every fix made to her code
+  and the open points. Add to it whenever her code is changed; newest date on top;
+  drop an item from «Ανοιχτά θέματα» when it is settled.
 - Console output on Windows needs `python -X utf8` or the Greek comes out as
   mojibake.
 
@@ -40,8 +43,8 @@ Scripts load data by bare relative filename, so they must run from their own
 folder; `.vscode/settings.json` sets `python.terminal.executeInFileDir`.
 
 - **`spectra/`** — her response-spectrum scripts (`part1.py`, `part2.py`,
-  `mePSa.py`, `part1_copy.py`, `part1panag.py`), the accelerograms
-  `elCentro.txt` and `Athens.txt` (Athens 1999), and their `.xlsx` outputs.
+  `mePSa.py`, `part1_copy.py`, `part1panag.py`), the accelerogram
+  `elCentro.txt`, and their `.xlsx` outputs.
 - **`spectra/gp/`** — the supervisor's modular version (`main.py`,
   `response_spectrum.py`, `response_spectrum_classic.py`, `elcentro_loader.py`
   reading `data/ELCENTRO`).
@@ -49,7 +52,11 @@ folder; `.vscode/settings.json` sets `python.terminal.executeInFileDir`.
   `TMD_harm_excit.py` (harmonic), the reviewed copies `TMD_gp.py` /
   `TMD_harm_excit_gp.py`, `Tsai&Lin.py` (plots of the optimum-tuning formulas),
   `harmonic excitation.py` (generates `harmonic excitation.txt`), the data
-  files `elCentro.txt`, `harmonic excitation.txt`, and older experiments
+  files `elCentro.txt`, `elcentro_NS.txt` (a longer El Centro record, 53.7 s),
+  `Athens.txt` (Athens 1999, values in m/s² — PGA 3.01 = 0.31 g; read with
+  factor 1 by `excitation.Athens()`, units still to be confirmed with her),
+  `GM_X/` (149 PEER NGA `.at2` records, header block at the END of each file),
+  `harmonic excitation.txt`, and older experiments
   `TMD_sin.py`, `TMD_dokimi.py` (reads `disp_building.txt`, `disp_tmd.txt`).
 - **`tmd_parametric/`** — refactor of the two `_gp` scripts into functions for
   parametric studies. See its own `README.md`. Modules: `structure.py`,

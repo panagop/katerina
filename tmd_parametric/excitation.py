@@ -67,30 +67,23 @@ def elcentro(path=None) -> Excitation:
         factor=G,
     )
 
+
 def Athens(path=None) -> Excitation:
-    """Το επιταχυνσιογράφημα Athens (τιμές σε g -> μετατροπή σε m/s^2)."""
+    """Το επιταχυνσιογράφημα Athens 1999 (τιμές σε m/s^2, χωρίς μετατροπή).
+
+    ΠΡΟΣΟΧΗ: το αρχείο έχει μέγιστη τιμή 3.01. Σε m/s^2 αυτό είναι PGA ≈ 0.31 g, λογικό
+    για τον σεισμό της Αθήνας· σε g θα ήταν 3 g. Γι' αυτό factor = 1 (όχι 9.81).
+    Να επιβεβαιωθεί από την πηγή του αρχείου.
+    """
     return load_from_file(
         path or DATA_DIR / "Athens.txt",
         name="Athens",
-        factor=9.81,
+        factor=1.0,
     )
 
-def thessaloniki78(path=None) -> Excitation:
-    """Το επιταχυνσιογράφημα Thessaloniki '78 (τιμές σε g -> μετατροπή σε m/s^2)."""
-    return load_from_file(
-        path or DATA_DIR / "thessaloniki78.txt",
-        name="Thessaloniki '78",
-        factor=9.81,
-    )
 
-def mexico95(path=None) -> Excitation:
-    """Το επιταχυνσιογράφημα Mexico '95 (τιμές σε g -> μετατροπή σε m/s^2)."""
-    return load_from_file(
-        path or DATA_DIR / "mexico95.txt",
-        name="Mexico '95",
-        factor=9.81,
-    )
-
+# Τα αρχεία των δύο παρακάτω ΔΕΝ υπάρχουν ακόμα στο aug26/: πρέπει να προστεθούν
+# (δύο στήλες [χρόνος, επιτάχυνση σε g]) πριν χρησιμοποιηθούν οι συναρτήσεις.
 
 def thessaloniki78(path=None) -> Excitation:
     """Το επιταχυνσιογράφημα Thessaloniki '78 (τιμές σε g -> μετατροπή σε m/s^2)."""
@@ -100,6 +93,7 @@ def thessaloniki78(path=None) -> Excitation:
         factor=G,
     )
 
+
 def mexico95(path=None) -> Excitation:
     """Το επιταχυνσιογράφημα Mexico '95 (τιμές σε g -> μετατροπή σε m/s^2)."""
     return load_from_file(
@@ -107,6 +101,7 @@ def mexico95(path=None) -> Excitation:
         name="Mexico '95",
         factor=G,
     )
+
 
 def harmonic(structure, rho=1.0, amplitude=None, dt=0.01, duration=60.0) -> Excitation:
     """

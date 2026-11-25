@@ -23,6 +23,20 @@ def read_peer_at2(filepath):
 
     return t, a_g
 
+@st.cache_data(show_spinner="Ανάγνωση των αρχείων .at2...")
+def read_all_at2(filepaths):
+    """Διαβάζει όλα τα αρχεία ΜΙΑ φορά ανά συνεδρία (cache), όχι σε κάθε κλικ.
+
+    Επιστρέφει (parsed_data, skipped): { όνομα: (t, a_g) } και τα αρχεία που δεν διαβάστηκαν.
+    """
+    parsed_data, skipped = {}, {}
+    for onoma, arxeio in filepaths.items():
+        try:
+            parsed_data[onoma] = read_peer_at2(arxeio)
+        except ValueError as e:
+            skipped[onoma] = str(e)
+    return parsed_data, skipped
+
 # --- 2. ΣΤΗΣΙΜΟ ΕΦΑΡΜΟΓΗΣ (UI) ---
 st.set_page_config(page_title="Κλιμάκωση Σεισμών", layout="wide")
 st.title("Ταυτόχρονη προβολή σεισμών με κοινό PGA")
@@ -79,66 +93,16 @@ else:
             help="Εστίασε στο τμήμα του σεισμού που σε ενδιαφέρει (π.χ. ισχυρή κίνηση)."
         )
 
-   # --- 5. ΕΠΕΞΕΡΓΑΣΙΑ (ΓΡΑΦΗΜΑ & ΠΙΝΑΚΑΣ) ---
+    # --- 5. ΕΠΕΞΕΡΓΑΣΙΑ (ΓΡΑΦΗΜΑ & ΠΙΝΑΚΑΣ) ---
+    # Τα αρχεία διαβάζονται μία φορά (cache)· εδώ μόνο κλιμακώνονται και σχεδιάζονται.
+    parsed_data, skipped = read_all_at2(available_seismoi)
+    if skipped:
+        st.warning(f"Δεν διαβάστηκαν {len(skipped)} αρχεία: " + ", ".join(skipped))
+
     table_data = []
     fig, ax = plt.subplots(figsize=(12, 5))
     plotted_count = 0  # Μετρητής για το πόσοι σχεδιάστηκαν
 
-    # ΠΡΟΣΟΧΗ: Πλέον η λούπα τρέχει σε ΟΛΟΥΣ τους σεισμούς του φακέλου (available_seismoi)
-    for onoma, arxeio in available_seismoi.items():
-        try:
-            t, a_g = read_peer_at2(arxeio)
-            current_pga = np.max(np.abs(a_g))
-            scale_factor = target_pga / current_pga
-            
-            # ΕΛΕΓΧΟΣ 1 (Για τον Πίνακα): Περνάει το φίλτρο με τις μπάρες;
-            if min_sf <= scale_factor <= max_sf:
-                
-                # Μπαίνει στον πίνακα!
-                table_data.append({
-                    "Σεισμός": onoma,
-                    "Αρχικό PGA (g)": current_pga,
-                    "Πολλαπλασιαστής (Scale Factor)": scale_factor,
-                    "Τελικό PGA (g)": target_pga
-                })
-                
-                # ΕΛΕΓΧΟΣ 2 (Για το Γράφημα): Τον έχεις επιλέξει από το μενού;
-                if onoma in selected_names:
-                    a_scaled = a_g * scale_factor              
-                    ax.plot(t, a_scaled, label=f"{onoma} (Scale: {scale_factor:.2f})", alpha=0.75, linewidth=1.2)
-                    plotted_count += 1
-
-        except Exception as e:
-            pass # Αγνοούμε σιωπηλά όσα αρχεία δεν διαβάζονται
-
-    # --- 6. ΕΠΕΞΕΡΓΑΣΙΑ (ΓΡΑΦΗΜΑ & ΠΙΝΑΚΑΣ) ---
-    table_data = []
-    fig, ax = plt.subplots(figsize=(12, 5))
-    plotted_count = 0 
-
-# --- ΠΡΟ-ΣΑΡΩΣΗ ΔΕΔΟΜΕΝΩΝ ΚΑΙ ΑΠΟΘΗΚΕΥΣΗ ΣΤΗ ΜΝΗΜΗ ---
-    parsed_data = {}
-    global_max_sf = 0.0
-    global_max_dur = 0.0
-
-    for onoma, arxeio in available_seismoi.items():
-        try:
-            t, a_g = read_peer_at2(arxeio)
-            parsed_data[onoma] = (t, a_g) # Η κρίσιμη αποθήκευση στη μνήμη!
-            
-            # Εύρεση μέγιστης διάρκειας (για να ρυθμιστεί το slider του χρόνου)
-            dur = t[-1]
-            if dur > global_max_dur:
-                global_max_dur = dur
-                
-            # Εύρεση μέγιστου scale factor (για να ρυθμιστεί το slider κλίμακας)
-            current_pga = np.max(np.abs(a_g))
-            sf = target_pga / current_pga
-            if sf > global_max_sf:
-                global_max_sf = sf
-        except:
-            pass # Αγνοεί τυχόν προβληματικά αρχεία χωρίς να "σκάει"
-        
     for onoma, (t, a_g) in parsed_data.items():
         
         current_pga = np.max(np.abs(a_g))
@@ -168,7 +132,7 @@ else:
                 plotted_count += 1
 
 
-    # --- 7. ΕΜΦΑΝΙΣΗ ΑΠΟΤΕΛΕΣΜΑΤΩΝ ---
+    # --- 6. ΕΜΦΑΝΙΣΗ ΑΠΟΤΕΛΕΣΜΑΤΩΝ ---
     
     # Εμφάνιση Γραφήματος
     if plotted_count > 0:
@@ -186,6 +150,7 @@ else:
         st.pyplot(fig) 
     elif selected_names:
         st.warning("Κανένας από τους επιλεγμένους σεισμούς δεν πέρασε το φίλτρο της κλίμακας (Scale Factor).")
+    plt.close(fig)  # αλλιώς κάθε κλικ αφήνει ένα ανοιχτό σχήμα στη μνήμη του server
 
     # Εμφάνιση Πίνακα
     st.divider()
@@ -204,5 +169,5 @@ else:
                 "Πολλαπλασιαστής (Scale Factor)": "{:.4f}",
                 "Τελικό PGA (g)": "{:.2f}"
             }),
-            use_container_width=True
+            width="stretch"
         )
