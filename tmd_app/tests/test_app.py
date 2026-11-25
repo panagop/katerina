@@ -15,7 +15,7 @@ from streamlit.testing.v1 import AppTest
 APP = str(Path(__file__).resolve().parent.parent / "streamlit_app.py")
 PAGES = ["app_pages/excitation.py", "app_pages/model.py",
          "app_pages/analysis.py", "app_pages/parametric.py",
-         "app_pages/normalization.py"]
+         "app_pages/normalization.py", "app_pages/about.py"]
 TIMEOUT = 60
 
 HARMONIC = {"kind": "harmonic", "rho": 1.0, "duration": 60.0, "dt": 0.01}
@@ -185,3 +185,12 @@ def test_optimum_search_xi_defaults_to_model_xi():
     # Αλλαγή του ξ στη σελίδα της κατασκευής -> νέα προεπιλογή εδώ
     at = open_page("app_pages/parametric.py", xi=0.05)
     assert next(w for w in at.number_input if w.label == label).value == pytest.approx(0.05)
+
+
+def test_about_page():
+    at = open_page("app_pages/about.py")
+    text = " ".join(m.value for m in at.markdown)
+    for expected in ("ΔΙΠΑΕ", "Αικατερίνης Παπαναστασίου", "Αθανασία Καζαντζή",
+                     "Γεώργιος Παναγόπουλος"):
+        assert expected in text
+    assert "Φεβρουάριος 2027" in [c.value for c in at.caption]

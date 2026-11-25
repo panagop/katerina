@@ -20,7 +20,7 @@ page = st.navigation(
         st.Page("app_pages/analysis.py", title="Ανάλυση", icon=":material/show_chart:"),
         st.Page("app_pages/parametric.py", title="Παραμετρική", icon=":material/stacked_line_chart:"),
         st.Page("app_pages/normalization.py", title="Σύγκριση", icon=":material/monitoring:"),
-        st.Page("app_pages/dokimi.py", title="Σχετικά", icon=":material/info:"),
+        st.Page("app_pages/about.py", title="Σχετικά", icon=":material/info:"),
     ],
     position="top",
 )

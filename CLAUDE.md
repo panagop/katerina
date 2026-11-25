@@ -67,8 +67,10 @@ folder; `.vscode/settings.json` sets `python.terminal.executeInFileDir`.
   `core.py`, pages in `app_pages/`, AppTest tests in `tests/`:
   `uv run pytest tmd_app/tests`). Katerina added the «Εύρεση Βέλτιστων» tab in
   `parametric.py` and the «Σύγκριση» page `normalization.py` (scales the
-  `aug26/GM_X` records). `drafts/` holds her earlier versions of that tab
-  (`test1-3.py`, not runnable, reference only).
+  `aug26/GM_X` records). `about.py` is the «Σχετικά» page (thesis context,
+  ΔΙΠΑΕ, supervisors Καζαντζή & Παναγόπουλος, `DATE` = Φεβρουάριος 2027; an app
+  version may be added there later). `drafts/` holds her earlier versions of
+  that tab (`test1-3.py`, not runnable, reference only).
 
 ## The model (shared by everything TMD-related)
 
