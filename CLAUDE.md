@@ -63,6 +63,12 @@ folder; `.vscode/settings.json` sets `python.terminal.executeInFileDir`.
   `excitation.py`, `analysis.py`, `results.py`, `plots.py`, drivers
   `run_single.py` and `run_parametric.py`. Outputs go to `figures/` and
   `results/`.
+- **`tmd_app/`** — Streamlit app over `tmd_parametric/` (`streamlit_app.py`,
+  `core.py`, pages in `app_pages/`, AppTest tests in `tests/`:
+  `uv run pytest tmd_app/tests`). Katerina added the «Εύρεση Βέλτιστων» tab in
+  `parametric.py` and the «Σύγκριση» page `normalization.py` (scales the
+  `aug26/GM_X` records). `drafts/` holds her earlier versions of that tab
+  (`test1-3.py`, not runnable, reference only).
 
 ## The model (shared by everything TMD-related)
 
