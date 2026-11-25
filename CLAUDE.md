@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+@OPENISSUES.md
+
 Coursework/thesis code for a structural dynamics student (Katerina), maintained
 with help from her supervisor (the user, a civil engineer). Structural dynamics
 in Python: response spectra, and SDOF systems with a Tuned Mass Damper (TMD)
