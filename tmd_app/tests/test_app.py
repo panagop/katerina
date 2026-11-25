@@ -14,7 +14,8 @@ from streamlit.testing.v1 import AppTest
 
 APP = str(Path(__file__).resolve().parent.parent / "streamlit_app.py")
 PAGES = ["app_pages/excitation.py", "app_pages/model.py",
-         "app_pages/analysis.py", "app_pages/parametric.py"]
+         "app_pages/analysis.py", "app_pages/parametric.py",
+         "app_pages/normalization.py"]
 TIMEOUT = 60
 
 HARMONIC = {"kind": "harmonic", "rho": 1.0, "duration": 60.0, "dt": 0.01}
@@ -119,3 +120,56 @@ def test_mass_ratio_detuning_grid():
 
     at.segmented_control(key="grid_z").set_value("διαδρομή_TMD").run()
     assert not at.exception
+
+
+def test_app_starts_with_elcentro():
+    at = open_page("app_pages/excitation.py")
+    assert at.session_state["excitation_spec"] == {"kind": "elcentro"}
+    assert at.segmented_control(key="exc_source").value == "El Centro"
+
+
+# --------------------------------------------------------------------------
+# Καρτέλα «Εύρεση Βέλτιστων» (αναζήτηση f, ξd ανά m̂)
+# --------------------------------------------------------------------------
+
+def _run_optimum_search(at):
+    """Μικρό πλέγμα 4 x 4 x 4 για να τρέχει γρήγορα."""
+    for label in ("Πλήθος (m)", "Πλήθος (f)", "Πλήθος (ξd)"):
+        next(w for w in at.number_input if w.label == label).set_value(4)
+    at.form("opt_search_form").form_submit_button[0].click().run()
+    assert not at.exception, at.exception
+
+
+def test_optimum_search_shows_tmd_stroke():
+    at = open_page("app_pages/parametric.py")
+    _run_optimum_search(at)
+    subheaders = [s.value for s in at.subheader]
+    assert "Μετακίνηση κατασκευής" in subheaders
+    assert "Σχετική διαδρομή TMD" in subheaders
+    assert not any("άλλαξαν" in w.value for w in at.warning)
+
+
+def test_optimum_check_uses_search_data_after_excitation_change():
+    at = open_page("app_pages/parametric.py")
+    _run_optimum_search(at)
+    at.session_state["excitation_spec"] = HARMONIC
+    at.run()
+    assert not at.exception, at.exception
+    # Προειδοποίηση, και ο έλεγχος στο χρόνο μένει στη διέγερση της αναζήτησης (El Centro)
+    assert any("άλλαξαν" in w.value for w in at.warning)
+    _, label, _, _, opt_ground = at.session_state["opt_result"]
+    assert label == opt_ground.name == "El Centro"
+
+
+# --------------------------------------------------------------------------
+# Σελίδα «Σύγκριση» (κλιμάκωση των .at2 του aug26/GM_X)
+# --------------------------------------------------------------------------
+
+def test_normalization_finds_all_records():
+    at = open_page("app_pages/normalization.py")
+    assert not any("Δεν βρέθηκαν" in w.value for w in at.warning)
+    assert len(at.multiselect[0].options) == 149
+    # Με τα προεπιλεγμένα όρια κλίμακας περνούν όλοι στον πίνακα
+    assert any("(149 συνολικά)" in m.value for m in at.markdown)
+    # Η επίσκεψη στη σελίδα δεν αλλάζει τη διέγερση της ανάλυσης
+    assert at.session_state["excitation_spec"] == {"kind": "elcentro"}

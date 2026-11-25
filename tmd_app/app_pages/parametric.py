@@ -336,12 +336,24 @@ with tab_opt:
             })
 
         bar.empty()
-        st.session_state["opt_result"] = (pd.DataFrame(best_results), ground.name, user_xi)
+        # Κρατάμε και την κατασκευή και τη διέγερση της αναζήτησης, ώστε ο έλεγχος
+        # στο χρόνο παρακάτω να γίνεται με τα ΙΔΙΑ δεδομένα (και όχι με τα τρέχοντα).
+        st.session_state["opt_result"] = (pd.DataFrame(best_results), ground.name, user_xi,
+                                          temp_structure, ground)
 
     stored_opt = st.session_state.get("opt_result")
     if stored_opt is not None:
-        df_opt, label, saved_xi = stored_opt
+        df_opt, label, saved_xi, opt_structure, opt_ground = stored_opt
         st.success(f"Η αναζήτηση ολοκληρώθηκε για τη διέγερση: {label} (με ξ = {saved_xi:.2f})")
+        # Αν άλλαξε η κατασκευή ή η διέγερση μετά την αναζήτηση, προειδοποίηση
+        same_structure = (opt_structure.m, opt_structure.T) == (structure.m, structure.T)
+        same_ground = (opt_ground.name == ground.name and opt_ground.dt == ground.dt
+                       and np.array_equal(opt_ground.a, ground.a))
+        if not (same_structure and same_ground):
+            st.warning("Η κατασκευή ή η διέγερση άλλαξαν μετά την αναζήτηση. Τα αποτελέσματα "
+                       f"παρακάτω αφορούν τα δεδομένα της αναζήτησης ({label}, T = "
+                       f"{opt_structure.T:g} s, m = {opt_structure.m:g} tn). "
+                       "Ξανατρέξτε την αναζήτηση για τα τρέχοντα δεδομένα.")
         
         # --- 1. ΥΠΟΛΟΓΙΣΜΟΣ ΕΞΙΣΩΣΕΩΝ (CURVE FITTING) ΓΙΑ RMS & U_MAX ---
         m_arr = df_opt["m̂"].values
@@ -421,7 +433,7 @@ with tab_opt:
             c2.line_chart(df_opt, x="m̂", y=["ξd_opt_umax", "Προσαρμοσμένο_ξd_opt_umax"], x_label="m̂", y_label="Βέλτιστο ξd", color=["#2ca02c", "#9467bd"])
             
         st.dataframe(df_opt, hide_index=True, column_config={c: st.column_config.NumberColumn(format="%.4f") for c in df_opt.columns if df_opt[c].dtype.kind == "f"})
-        st.download_button("Λήψη Βέλτιστων Τιμών (csv)", core.to_csv(df_opt), file_name=f"optimal_parameters_{ground.name}.csv", mime="text/csv", icon=":material/download:")
+        st.download_button("Λήψη Βέλτιστων Τιμών (csv)", core.to_csv(df_opt), file_name=f"optimal_parameters_{label}.csv", mime="text/csv", icon=":material/download:")
 
 
      # --- 4. ΙΣΤΟΡΙΚΟ ΧΡΟΝΟΥ (ΓΡΑΦΗΜΑΤΑ) ---
@@ -458,14 +470,13 @@ with tab_opt:
         else:
             st.info(f"Για m̂ = {selected_m:.3f} εφαρμόζονται τα βέλτιστα ({target_choice}): **f = {f_num:.4f}** και **ξd = {x_num:.4f}**")
         
-        # --- Ανάλυση με τα νέα δεδομένα ---
-        import dataclasses
-        temp_structure2 = dataclasses.replace(structure, ξ=saved_xi)
+        # --- Ανάλυση με τα δεδομένα της αναζήτησης (κατασκευή, ξ και διέγερση) ---
+        temp_structure2 = opt_structure
         tmd_num = core.design_tmd(temp_structure2, selected_m, f=f_num, ξd=x_num)
-        
+
         with st.spinner("Ανάλυση στο OpenSees..."):
-            res_baseline = core.analyse(temp_structure2, ground)
-            res_tmd = core.analyse(temp_structure2, ground, tmd_num)
+            res_baseline = core.analyse(temp_structure2, opt_ground)
+            res_tmd = core.analyse(temp_structure2, opt_ground, tmd_num)
         
         r_opt = core.results.compare(res_baseline, res_tmd)
         
@@ -474,37 +485,16 @@ with tab_opt:
             st.metric("u_max με TMD", f"{r_opt['u_max_με']:.4f} m", delta=f"{-r_opt['μείωση_u_max_%']:.2f} %", delta_color="inverse", border=True)
             st.metric("Ενεργός Τιμή RMS", f"{r_opt['RMS_με']:.4f} m", delta=f"{-r_opt['μείωση_RMS_%']:.2f} %", delta_color="inverse", border=True)
         
-        # --- ΧΕΙΡΟΚΙΝΗΤΗ ΚΑΤΑΣΚΕΥΗ ΤΩΝ DATAFRAME ΓΙΑ ΤΑ ΓΡΑΦΗΜΑΤΑ ---
-        try:
-            # Τραβάμε τον χρόνο από το ground
-            t = ground.t
-            
-            # Τραβάμε τις μετακινήσεις (u) από τα αποτελέσματα
-            u_base = res_baseline.u if res_baseline.u.ndim == 1 else res_baseline.u[:, 0]
-            u_tmd_bldg = res_tmd.u[:, 0] if res_tmd.u.ndim > 1 else res_tmd.u
-            
-            df_hist = pd.DataFrame({
-                "t (s)": t,
-                "u χωρίς TMD (m)": u_base,
-                "u με TMD (m)": u_tmd_bldg
-            })
-            
-            st.subheader("Μετακίνηση κατασκευής", anchor=False)
-            st.line_chart(df_hist, x="t (s)", y=["u χωρίς TMD (m)", "u με TMD (m)"], 
-                          x_label="Χρόνος (s)", y_label="Μετακίνηση u (m)", 
-                          color=["#9aa0a6", "#d62728"])
-            
-            # Υπολογισμός διαδρομής TMD (Σχετική μετακίνηση: TMD - Κτίριο)
-            if res_tmd.u.ndim > 1 and res_tmd.u.shape[1] > 1:
-                stroke = res_tmd.u[:, 1] - res_tmd.u[:, 0]
-                df_stroke = pd.DataFrame({
-                    "t (s)": t,
-                    "διαδρομή TMD (m)": stroke
-                })
-                st.subheader("Σχετική διαδρομή TMD", anchor=False)
-                st.line_chart(df_stroke, x="t (s)", y="διαδρομή TMD (m)", 
-                              x_label="Χρόνος (s)", y_label="u₃ − u₂ (m)")
-                              
-        except AttributeError as e:
-            st.error(f"Δεν μπόρεσα να βρω τις μεταβλητές της μετακίνησης. Σφάλμα: {e}")
-            st.info("Πιθανόν στο `core.py` τα αποτελέσματα να μην αποθηκεύονται ως `.u`. Έλεγξε πώς ονομάζεται η μετακίνηση (π.χ. `.disp`) και αντικατάστησέ το στον κώδικα.")
+        # --- ΓΡΑΦΗΜΑΤΑ ΧΡΟΝΟΪΣΤΟΡΙΑΣ ---
+        # Το Response έχει .u (μετακίνηση κόμβου 2, πίνακας 1-Δ) και .stroke
+        # (διαδρομή TMD, κόμβος 3 - κόμβος 2). Το core.history_frame τα βάζει σε πίνακα.
+        df_hist = core.history_frame(res_baseline, res_tmd)
+
+        st.subheader("Μετακίνηση κατασκευής", anchor=False)
+        st.line_chart(df_hist, x="t (s)", y=["u χωρίς TMD (m)", "u με TMD (m)"],
+                      x_label="Χρόνος (s)", y_label="Μετακίνηση u (m)",
+                      color=["#9aa0a6", "#d62728"])
+
+        st.subheader("Σχετική διαδρομή TMD", anchor=False)
+        st.line_chart(df_hist, x="t (s)", y="διαδρομή TMD (m)",
+                      x_label="Χρόνος (s)", y_label="u₃ − u₂ (m)")

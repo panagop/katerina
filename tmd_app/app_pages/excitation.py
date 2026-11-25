@@ -33,13 +33,22 @@ elif source == "Αρχείο":
         upload = st.file_uploader("Αρχείο επιταχυνσιογραφήματος (.txt, .dat, .csv, .at2)",
                                   type=["txt", "dat", "csv", "at2", "acc"])
         c1, c2, c3, c4 = st.columns(4)
-        layout = c1.selectbox("Μορφή", ["t, a", "a", "πολλές"],
+        # Για αρχεία .at2 προεπιλέγεται η μορφή PEER (dt και NPTS από την επικεφαλίδα)
+        LAYOUTS = ["t, a", "a", "πολλές", "PEER .at2"]
+        is_at2 = upload is not None and upload.name.lower().endswith(".at2")
+        layout = c1.selectbox("Μορφή", LAYOUTS, index=3 if is_at2 else 0,
                               help="«t, a»: δύο στήλες χρόνος-επιτάχυνση. "
-                                   "«a»: μία στήλη. «πολλές»: πολλές τιμές ανά γραμμή (PEER).")
-        unit = c2.selectbox("Μονάδες αρχείου", list(core.UNITS))
-        skiprows = c3.number_input("Γραμμές επικεφαλίδας", 0, 200, 0, step=1)
+                                   "«a»: μία στήλη. «πολλές»: πολλές τιμές ανά γραμμή. "
+                                   "«PEER .at2»: αρχείο PEER NGA, το dt διαβάζεται από "
+                                   "την επικεφαλίδα (στην αρχή ή στο τέλος του αρχείου).")
+        peer = layout == "PEER .at2"
+        unit = c2.selectbox("Μονάδες αρχείου", list(core.UNITS), disabled=peer,
+                            help="Τα αρχεία PEER είναι πάντα σε g.")
+        if peer:
+            unit = "g"
+        skiprows = c3.number_input("Γραμμές επικεφαλίδας", 0, 200, 0, step=1, disabled=peer)
         dt_in = c4.number_input("dt (s)", 0.0001, 1.0, 0.01, step=0.005, format="%.4f",
-                                disabled=layout == "t, a",
+                                disabled=layout in ("t, a", "PEER .at2"),
                                 help="Χρειάζεται μόνο όταν το αρχείο δεν έχει στήλη χρόνου.")
         scale = st.number_input("Συντελεστής κλίμακας", 0.0, 100.0, 1.0, step=0.1,
                                 help="Πολλαπλασιάζει την καταγραφή (π.χ. για κλιμάκωση σε PGA στόχο).")
@@ -47,7 +56,8 @@ elif source == "Αρχείο":
     if upload is not None:
         try:
             dt, a_raw = core.parse_accelerogram(
-                upload.getvalue(), int(skiprows), layout, None if layout == "t, a" else dt_in
+                upload.getvalue(), int(skiprows), layout,
+                None if layout in ("t, a", "PEER .at2") else dt_in
             )
         except ValueError as e:
             # Χωρίς st.stop(): θα σταματούσε και τη σύνοψη της πλαϊνής στήλης

@@ -6,50 +6,21 @@ import os
 import glob
 import math
 
-# --- 1. ΕΞΥΠΝΗ ΣΥΝΑΡΤΗΣΗ ΑΝΑΓΝΩΣΗΣ ΑΡΧΕΙΩΝ PEER (.at2) ---
+import core
+
+# --- 1. ΑΝΑΓΝΩΣΗ ΑΡΧΕΙΩΝ PEER (.at2) ---
 def read_peer_at2(filepath):
-    """Διαβάζει αρχεία .at2 αγνοώντας αυτόματα το κείμενο, όπου κι αν βρίσκεται."""
-    dt = 0.01  # Προεπιλεγμένη τιμή βήματος χρόνου
-    acc_data = []
+    """Διαβάζει αρχείο .at2 με το core.parse_peer_at2 (ίδιο με τη σελίδα «Διέγερση»).
 
-    with open(filepath, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
+    Τα dt και NPTS διαβάζονται από την επικεφαλίδα, στην αρχή ή στο τέλος του αρχείου.
+    Αρχείο χωρίς επικεφαλίδα δίνει ValueError (δεν μαντεύουμε dt).
+    """
+    with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
+        dt, a_g = core.parse_peer_at2(f.read())
 
-    for line in lines:
-        line_str = line.strip()
-        if not line_str:
-            continue
-            
-        parts = line_str.split()
-        
-        # 1. Ψάχνουμε να βρούμε το βήμα χρόνου (DT) από τη γραμμή που το αναφέρει
-        if 'DT' in line_str.upper() or 'NPTS' in line_str.upper():
-            for p in parts:
-                try:
-                    val = float(p)
-                    # Το DT είναι μικρός αριθμός (π.χ. 0.01, 0.005), ενώ το NPTS χιλιάδες (π.χ. 3060)
-                    if val < 1.0:  
-                        dt = val
-                except ValueError:
-                    pass
-            continue # Πάμε στην επόμενη γραμμή
-
-        # 2. Προσπαθούμε να διαβάσουμε τους αριθμούς της επιτάχυνσης
-        try:
-            # Δοκιμάζουμε αν το πρώτο στοιχείο της γραμμής είναι αριθμός
-            float(parts[0])
-            # Αν είναι αριθμός, βάζουμε όλα τα νούμερα της γραμμής στη λίστα μας
-            acc_data.extend([float(val) for val in parts])
-        except ValueError:
-            # Αν "σκάσει" (δηλαδή έχει γράμματα όπως "PEER"), την αγνοούμε απλά!
-            continue
-
-    # Μετατροπή σε numpy array
-    a_g = np.array(acc_data)
-    
     # Φτιάχνουμε τον άξονα του χρόνου: [0, dt, 2*dt, 3*dt, ...]
     t = np.arange(len(a_g)) * dt
-    
+
     return t, a_g
 
 # --- 2. ΣΤΗΣΙΜΟ ΕΦΑΡΜΟΓΗΣ (UI) ---
@@ -59,7 +30,8 @@ st.title("Ταυτόχρονη προβολή σεισμών με κοινό PGA
 
 # --- 3. ΑΝΑΓΝΩΣΗ ΦΑΚΕΛΟΥ & ΕΠΙΛΟΓΗ ---
 # Ορίζεις ΤΟΝ ΦΑΚΕΛΟ που έχει μέσα όλα τα .at2
-folder_path = r"C:\mypython\katerina_tmd_dikimes\aug26\GM_X"
+# Σχετικά με τη θέση αυτού του αρχείου (tmd_app/app_pages/), ώστε να δουλεύει σε κάθε υπολογιστή
+folder_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "aug26", "GM_X")
 
 # Βρίσκει αυτόματα ΟΛΑ τα αρχεία .at2 μέσα στον φάκελο
 all_at2_files = glob.glob(os.path.join(folder_path, "*.at2"))
