@@ -8,7 +8,8 @@
 """
 
 import io
-import re
+import os
+import sqlite3
 import sys
 import threading
 import warnings
@@ -25,7 +26,9 @@ sys.path.insert(0, str(PARAM_DIR))
 # that dynamic import path unless we silence the missing-import warning.
 import excitation as exc  # type: ignore[reportMissingImports]  # noqa: E402
 import results  # type: ignore[reportMissingImports]  # noqa: E402
-from analysis import run_analysis  # type: ignore[reportMissingImports]  # noqa: E402
+from analysis import Response, run_analysis  # type: ignore[reportMissingImports]  # noqa: E402
+import optimum  # type: ignore[reportMissingImports]  # noqa: E402
+import store as rstore  # type: ignore[reportMissingImports]  # noqa: E402
 from structure import Structure, design_tmd, tsai_lin_f, tsai_lin_xi  # type: ignore[reportMissingImports]  # noqa: E402
 
 # Συντελεστές μετατροπής σε m/s^2
@@ -92,66 +95,9 @@ def current_excitation(structure: Structure) -> exc.Excitation:
 # Ανάγνωση αρχείου επιταχυνσιογραφήματος
 # --------------------------------------------------------------------------
 
-# Γραμμή NPTS/DT των αρχείων PEER NGA .AT2, στις δύο μορφές που κυκλοφορούν:
-#   "NPTS=   2000, DT=   .0050 SEC"   (NGA-West2, επικεφαλίδα στην αρχή)
-#   "2000    0.0050    NPTS, DT"      (παλαιότερα NGA, επικεφαλίδα στην αρχή ή στο τέλος)
-# Ίδια λογική με το Accelerogram.ParsePeerAt2 της βιβλιοθήκης STREX (C#).
-_PEER_NPTS_DT = re.compile(r"NPTS\s*=\s*(\d+)\s*,\s*DT\s*=\s*([\d.Ee+\-]+)", re.IGNORECASE)
-_PEER_NPTS_DT_POS = re.compile(r"^(\d+)\s+([\d.Ee+\-]+)\s+NPTS\s*,\s*DT\b", re.IGNORECASE)
-
-
-def _is_numeric_line(line: str) -> bool:
-    parts = line.split()
-    if not parts:
-        return False
-    try:
-        for p in parts:
-            float(p)
-    except ValueError:
-        return False
-    return True
-
-
-def parse_peer_at2(text: str):
-    """
-    Αρχείο PEER NGA .AT2 (τιμές σε g).
-
-    Η επικεφαλίδα 4 γραμμών (τίτλος βάσης· σεισμός, σταθμός, συνιστώσα· μονάδες·
-    NPTS και DT) είναι συνήθως στην αρχή, αλλά σε κάποιες συλλογές (π.χ. aug26/GM_X)
-    είναι στο τέλος. Διαβάζονται και οι δύο μορφές· τα dt και NPTS από την επικεφαλίδα.
-
-    Επιστρέφει (dt, a).
-    """
-    lines = [line.strip() for line in text.splitlines()]
-
-    npts_line, npts, dt = -1, 0, 0.0
-    for i, line in enumerate(lines):
-        m = _PEER_NPTS_DT.search(line) or _PEER_NPTS_DT_POS.match(line)
-        if m:
-            npts_line, npts, dt = i, int(m.group(1)), float(m.group(2))
-            break
-    if npts_line < 0:
-        raise ValueError("Αρχείο PEER .AT2: δεν βρέθηκε η γραμμή «NPTS=n, DT=t SEC» "
-                         "(ή «n t NPTS, DT») της επικεφαλίδας.")
-    if dt <= 0:
-        raise ValueError("Αρχείο PEER .AT2: το DT της επικεφαλίδας δεν είναι θετικός αριθμός.")
-
-    # Η επικεφαλίδα είναι οι γραμμές κειμένου που τελειώνουν στη γραμμή NPTS
-    header_start = npts_line
-    while (header_start > 0 and lines[header_start - 1]
-           and not _is_numeric_line(lines[header_start - 1])):
-        header_start -= 1
-
-    # Δεδομένα μετά την επικεφαλίδα (συνήθως) ή, αν δεν υπάρχουν, πριν από αυτήν (στο τέλος)
-    data = [line for line in lines[npts_line + 1:] if _is_numeric_line(line)]
-    if not data:
-        data = [line for line in lines[:header_start] if _is_numeric_line(line)]
-
-    a = np.array([float(v) for line in data for v in line.split()])
-    if len(a) < npts:
-        raise ValueError(f"Αρχείο PEER .AT2: η επικεφαλίδα δίνει NPTS = {npts}, "
-                         f"αλλά το αρχείο έχει μόνο {len(a)} τιμές.")
-    return dt, a[:npts]  # τυχόν συμπληρωματικά μηδενικά μετά το τελευταίο σημείο
+# Ο αναγνώστης PEER .AT2 βρίσκεται στο tmd_parametric/excitation.py, ώστε να τον
+# χρησιμοποιεί και το run_optimum_batch.py χωρίς Streamlit.
+parse_peer_at2 = exc.parse_peer_at2
 
 
 def parse_accelerogram(raw: bytes, skiprows: int, layout: str, dt: float | None):
@@ -229,6 +175,36 @@ def analyse(structure, excitation, tmd=None):
     return _run_cached(*_key(structure, excitation, tmd))
 
 
+# --------------------------------------------------------------------------
+# Αποθηκευμένα αποτελέσματα (tmd_parametric/store.py)
+# --------------------------------------------------------------------------
+
+@st.cache_resource
+def result_store():
+    """Η βάση αποτελεσμάτων (results_db/ στη ρίζα του repo, ή TMD_RESULTS_DIR).
+
+    None αν ο φάκελος δεν γράφεται: η εφαρμογή δουλεύει κανονικά, χωρίς αποθήκευση.
+    """
+    folder = os.environ.get("TMD_RESULTS_DIR") or rstore.DEFAULT_DIR
+    try:
+        return rstore.ResultStore(folder)
+    except (OSError, sqlite3.Error):
+        return None
+
+
+def response(structure, excitation, tmd=None):
+    """Η απόκριση από την αποθηκευμένη χρονοϊστορία, αν υπάρχει· αλλιώς νέα ανάλυση."""
+    store = result_store()
+    if store is not None:
+        args = () if tmd is None else (tmd.m_hat, tmd.f, tmd.ξd)
+        h = store.find_history(rstore.excitation_id(excitation), structure, *args)
+        if h is not None:
+            t, u, stroke = h
+            return Response(label="με TMD" if tmd else "χωρίς TMD", t=t, u=u, stroke=stroke,
+                            structure=structure, excitation=excitation, tmd=tmd)
+    return analyse(structure, excitation, tmd)
+
+
 def history_frame(baseline, controlled) -> pd.DataFrame:
     """Χρονοϊστορίες σε πίνακα, για διαγράμματα και λήψη csv."""
     return pd.DataFrame({
@@ -247,5 +223,5 @@ def to_csv(df: pd.DataFrame) -> bytes:
 __all__ = [
     "UNITS", "init_state", "current_structure", "current_tmd", "current_excitation",
     "parse_accelerogram", "analyse", "history_frame", "to_csv",
-    "results", "exc", "design_tmd", "tsai_lin_f", "tsai_lin_xi", "Structure",
+    "results", "exc", "design_tmd", "optimum", "rstore", "result_store", "response", "tsai_lin_f", "tsai_lin_xi", "Structure",
 ]

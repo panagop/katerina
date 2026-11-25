@@ -287,67 +287,105 @@ with tab_opt:
             opt_x_hi = st.number_input("Έως (ξd)", value=0.25, step=0.01, format="%.3f")
             opt_x_n = st.number_input("Πλήθος (ξd)", 2, 200, 30, step=1)
         
+        result_store = core.result_store()
+        can_store_hist = result_store is not None and core.rstore.histories_available()
+        save_hist = st.checkbox(
+            "Αποθήκευση χρονοϊστοριών", value=can_store_hist, disabled=not can_store_hist,
+            help="Τα βαθμωτά αποτελέσματα (u_max, RMS, διαδρομή) αποθηκεύονται πάντα στο "
+                 "results_db/. Με αυτή την επιλογή αποθηκεύονται και οι χρονοϊστορίες "
+                 "(≈ 10 kB ανά ανάλυση για το El Centro, πολύ περισσότερο για μεγάλες καταγραφές).")
+
         run_opt = st.form_submit_button("Έναρξη Αναζήτησης", type="primary", icon=":material/search:")
+
+    if result_store is None:
+        st.caption("Η βάση αποτελεσμάτων δεν είναι διαθέσιμη εδώ: οι αναζητήσεις δεν αποθηκεύονται.")
+
+    def best_per_mass(grid):
+        """Τα βέλτιστα (ελάχιστο RMS και ελάχιστο u_max) για κάθε m̂, από όλο το πλέγμα."""
+        best_results = []
+        for mh, g in grid.groupby("m_hat", sort=False):
+            row_rms = g.loc[g["RMS_με"].idxmin()]
+            row_umax = g.loc[g["u_max_με"].idxmin()]
+            # Αποθηκεύουμε τα βέλτιστα ΚΑΙ των 2 κριτηρίων στον ίδιο πίνακα
+            best_results.append({
+                "m̂": mh,
+                "f_opt_RMS": row_rms["f"], "ξd_opt_RMS": row_rms["ξd"],
+                "Μείωση_RMS_%": row_rms["μείωση_RMS_%"], "RMS_με": row_rms["RMS_με"],
+                "f_opt_umax": row_umax["f"], "ξd_opt_umax": row_umax["ξd"],
+                "Μείωση_umax_%": row_umax["μείωση_u_max_%"], "u_max_με": row_umax["u_max_με"],
+                "u_max_χωρίς": row_umax["u_max_χωρίς"]  # Το χρειαζόμαστε για τα metrics μετά
+            })
+        return pd.DataFrame(best_results)
+
+    # --- Αποθηκευμένες αναζητήσεις: φόρτωση χωρίς νέες αναλύσεις ---
+    if result_store is not None:
+        saved = result_store.searches()
+        with st.expander(f"Αποθηκευμένες αναζητήσεις ({len(saved)})", icon=":material/database:"):
+            if saved.empty:
+                st.caption("Δεν υπάρχουν ακόμα. Κάθε αναζήτηση από εδώ ή από το "
+                           "`tmd_parametric/run_optimum_batch.py` αποθηκεύεται στο `results_db/`.")
+            else:
+                view = saved.rename(columns={
+                    "search_id": "α/α", "created": "ημερομηνία", "source": "από",
+                    "excitation": "διέγερση", "xi": "ξ", "histories": "χρονοϊστορίες",
+                    "n_total": "αναλύσεις", "n_computed": "νέες"})
+                st.dataframe(view[["α/α", "ημερομηνία", "από", "διέγερση", "m", "T", "ξ",
+                                   "m_lo", "m_hi", "m_n", "f_lo", "f_hi", "f_n",
+                                   "xd_lo", "xd_hi", "xd_n", "χρονοϊστορίες", "αναλύσεις", "νέες"]],
+                             hide_index=True)
+                c_load1, c_load2 = st.columns([3, 1], vertical_alignment="bottom")
+                # (στήλες με r["T"]: το r.T σε pandas είναι ο ανάστροφος πίνακας)
+                rows = {int(r["search_id"]): r for _, r in saved.iterrows()}
+                labels = {i: f'{i}: {r["excitation"]}, T = {r["T"]:g} s, ξ = {r["xi"]:g}, '
+                             f'{r["n_total"]} αναλύσεις' for i, r in rows.items()}
+                load_id = c_load1.selectbox("Αναζήτηση", list(rows), key="opt_load_id",
+                                            format_func=labels.get)
+                if c_load2.button("Φόρτωση", icon=":material/download:", key="opt_load"):
+                    r = rows[load_id]
+                    s_load = core.Structure(m=float(r["m"]), T=float(r["T"]), ξ=float(r["xi"]))
+                    g_load = result_store.excitation(r["exc_id"])
+                    grid = core.optimum.grid_search(
+                        s_load, g_load, core.rstore.grid_values(r["m_lo"], r["m_hi"], r["m_n"]),
+                        core.rstore.grid_values(r["f_lo"], r["f_hi"], r["f_n"]),
+                        core.rstore.grid_values(r["xd_lo"], r["xd_hi"], r["xd_n"]),
+                        store=result_store, log=False, lock=core._OPS_LOCK)
+                    st.session_state["opt_result"] = (best_per_mass(grid), g_load.name, s_load.ξ,
+                                                      s_load, g_load)
 
     if run_opt:
         import dataclasses
         temp_structure = dataclasses.replace(structure, ξ=user_xi)
         
-        m_vals = np.linspace(opt_m_lo, opt_m_hi, int(opt_m_n))
-        f_vals = np.linspace(opt_f_lo, opt_f_hi, int(opt_f_n))
-        x_vals = np.linspace(opt_x_lo, opt_x_hi, int(opt_x_n))
+        m_vals = core.rstore.grid_values(opt_m_lo, opt_m_hi, opt_m_n)
+        f_vals = core.rstore.grid_values(opt_f_lo, opt_f_hi, opt_f_n)
+        x_vals = core.rstore.grid_values(opt_x_lo, opt_x_hi, opt_x_n)
         
         total_runs = len(m_vals) * len(f_vals) * len(x_vals)
-        st.info(f"Εκτέλεση {total_runs} αναλύσεων με απόσβεση κτιρίου ξ = {user_xi:g}...")
+        n_stored = (core.optimum.count_stored(result_store, temp_structure, ground, m_vals, f_vals, x_vals)
+                    if result_store is not None else 0)
+        st.info(f"Εκτέλεση {total_runs - n_stored} αναλύσεων με απόσβεση κτιρίου ξ = {user_xi:g} "
+                f"({n_stored} από {total_runs} ήδη αποθηκευμένες)...")
         if user_xi != structure.ξ and st.session_state.excitation_spec["kind"] == "harmonic":
             # Το πλάτος της αρμονικής (2ξk/m) υπολογίστηκε με το ξ της κατασκευής
             st.warning(f"Η αρμονική διέγερση έχει πλάτος 2ξk/m με ξ = {structure.ξ:g} (σελίδα "
                        f"«Κατασκευή & TMD»), ενώ η αναζήτηση γίνεται με ξ = {user_xi:g}: η "
                        "απόκριση χωρίς TMD στον συντονισμό δεν θα είναι 1.00 m.")
         bar = st.progress(0.0, text="Αναζήτηση βέλτιστων...")
-        
-        baseline = core.analyse(temp_structure, ground)
-        best_results = []
-        counter = 0
 
-        # --- ΝΕΟ: Εύρεση Βέλτιστων ΚΑΙ για RMS ΚΑΙ για u_max ταυτόχρονα! ---
-        for mh in m_vals:
-            best_rms = float('inf')
-            best_umax = float('inf')
-            f_rms, x_rms, row_rms = 0, 0, None
-            f_umax, x_umax, row_umax = 0, 0, None
-            
-            for f_val in f_vals:
-                for x_val in x_vals:
-                    tmd = core.design_tmd(temp_structure, mh, f=f_val, ξd=x_val)
-                    row = core.results.compare(baseline, core.analyse(temp_structure, ground, tmd))
-                    
-                    if row["RMS_με"] < best_rms:
-                        best_rms = row["RMS_με"]
-                        f_rms, x_rms, row_rms = f_val, x_val, row
-                        
-                    if row["u_max_με"] < best_umax:
-                        best_umax = row["u_max_με"]
-                        f_umax, x_umax, row_umax = f_val, x_val, row
-                    
-                    counter += 1
-                    if counter % 100 == 0: 
-                        bar.progress(counter / total_runs, text=f"m̂ = {mh:.3f} | Αναλύθηκαν {counter}/{total_runs}")
-            
-            # Αποθηκεύουμε τα βέλτιστα ΚΑΙ των 2 κριτηρίων στον ίδιο πίνακα
-            best_results.append({
-                "m̂": mh,
-                "f_opt_RMS": f_rms, "ξd_opt_RMS": x_rms, 
-                "Μείωση_RMS_%": row_rms["μείωση_RMS_%"], "RMS_με": row_rms["RMS_με"],
-                "f_opt_umax": f_umax, "ξd_opt_umax": x_umax, 
-                "Μείωση_umax_%": row_umax["μείωση_u_max_%"], "u_max_με": row_umax["u_max_με"],
-                "u_max_χωρίς": row_umax["u_max_χωρίς"] # Το χρειαζόμαστε για τα metrics μετά
-            })
+        def show_progress(done, total):
+            bar.progress(done / total, text=f"Αναλύθηκαν {done}/{total}")
+
+        # Όλο το πλέγμα m̂ × f × ξd: τα αποθηκευμένα σημεία διαβάζονται, τα υπόλοιπα
+        # τρέχουν και αποθηκεύονται (tmd_parametric/optimum.py)
+        grid = core.optimum.grid_search(temp_structure, ground, m_vals, f_vals, x_vals,
+                                        store=result_store, histories=save_hist,
+                                        progress=show_progress, lock=core._OPS_LOCK)
+        best_results = best_per_mass(grid)
 
         bar.empty()
         # Κρατάμε και την κατασκευή και τη διέγερση της αναζήτησης, ώστε ο έλεγχος
         # στο χρόνο παρακάτω να γίνεται με τα ΙΔΙΑ δεδομένα (και όχι με τα τρέχοντα).
-        st.session_state["opt_result"] = (pd.DataFrame(best_results), ground.name, user_xi,
+        st.session_state["opt_result"] = (best_results, ground.name, user_xi,
                                           temp_structure, ground)
 
     stored_opt = st.session_state.get("opt_result")
@@ -486,8 +524,9 @@ with tab_opt:
         tmd_num = core.design_tmd(temp_structure2, selected_m, f=f_num, ξd=x_num)
 
         with st.spinner("Ανάλυση στο OpenSees..."):
-            res_baseline = core.analyse(temp_structure2, opt_ground)
-            res_tmd = core.analyse(temp_structure2, opt_ground, tmd_num)
+            # Από τις αποθηκευμένες χρονοϊστορίες αν υπάρχουν, αλλιώς νέα ανάλυση
+            res_baseline = core.response(temp_structure2, opt_ground)
+            res_tmd = core.response(temp_structure2, opt_ground, tmd_num)
         
         r_opt = core.results.compare(res_baseline, res_tmd)
         

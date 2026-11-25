@@ -8,12 +8,16 @@
 | Αρχείο | Περιεχόμενο |
 |---|---|
 | `structure.py` | `Structure`, `TMD`, σχέσεις Tsai & Lin, `design_tmd()` |
-| `excitation.py` | `Excitation`, `elcentro()`, `harmonic()`, `load_from_file()` |
+| `excitation.py` | `Excitation`, `elcentro()`, `harmonic()`, `load_from_file()`, `parse_peer_at2()`, `load_peer_at2()` |
 | `analysis.py` | `build_model()`, `run_analysis()`, `run_pair()`, `Response` |
-| `results.py` | `compute_metrics()`, `compare()`, `print_report()`, `save_table()` |
+| `results.py` | `compute_metrics()`, `compare()`, `compare_metrics()`, `print_report()`, `save_table()` |
 | `plots.py` | `plot_excitation()`, `plot_responses()`, `plot_stroke()`, `plot_sweep()` |
 | `run_single.py` | Μία ανάλυση (σεισμική ή αρμονική) - ό,τι έκαναν τα αρχικά scripts |
 | `run_parametric.py` | Τρεις σαρώσεις παραμέτρων, με csv και png |
+| `store.py` | Βάση αποτελεσμάτων `ResultStore` (SQLite + προαιρετικά HDF5) |
+| `optimum.py` | `grid_search()`: πλέγμα m̂ × f × ξd, τρέχει μόνο ό,τι λείπει από τη βάση |
+| `run_optimum_batch.py` | Αναζήτηση βέλτιστων για πολλές διεγέρσεις, παράλληλα, με αποθήκευση |
+| `tests/` | Έλεγχοι της βάσης και της αναζήτησης: `uv run pytest tmd_parametric/tests` |
 
 Τα δεδομένα διαβάζονται από τον φάκελο `../aug26/` (El Centro). Η αρμονική
 διέγερση παράγεται στη μνήμη, ώστε να μπορεί να αλλάζει η συχνότητά της.
@@ -49,3 +53,57 @@ uv run --project .. python run_parametric.py --sweep frequency --m-hat 0.03
 Για κάθε ανάλυση καταγράφονται: μέγιστη μετακίνηση, RMS, πλάτος μόνιμης
 κατάστασης (τελευταίο 20% της χρονοϊστορίας) και **μέγιστη σχετική διαδρομή
 του TMD** - το μέγεθος που καθορίζει αν η συσκευή είναι κατασκευάσιμη.
+
+## Αποθηκευμένα αποτελέσματα (`results_db/`)
+
+Η «Εύρεση Βέλτιστων» (πλέγμα m̂ × f × ξd) μπορεί να θέλει χιλιάδες αναλύσεις:
+≈ 7 ms η καθεμία για το El Centro, ≈ 0.17 s για καταγραφή 37 500 σημείων, δηλαδή
+≈ 17 min για το προεπιλεγμένο πλέγμα (6000 αναλύσεις) μίας μεγάλης καταγραφής. Γι' αυτό
+κάθε ανάλυση αποθηκεύεται και δεν ξανατρέχει.
+
+Ο φάκελος `results_db/` (στη ρίζα του repo) είναι **μόνο τοπικός**, εκτός git:
+
+| Αρχείο | Περιεχόμενο |
+|---|---|
+| `tmd_results.sqlite` | Όλα τα βαθμωτά αποτελέσματα και ο κατάλογος του τι έχει τρέξει |
+| `histories/<exc_id>.h5` | Προαιρετικά: χρονοϊστορίες u και διαδρομής TMD (float32, συμπιεσμένες) |
+
+Πίνακες της βάσης: `excitations` (κάθε διέγερση, με τις τιμές της), `baselines` (απόκριση
+χωρίς TMD), `runs` (μία γραμμή ανά ανάλυση με TMD), `searches` (κάθε αναζήτηση: τι
+ζητήθηκε, πότε, πόσες αναλύσεις ήταν νέες). Το `exc_id` είναι hash των τιμών της
+επιτάχυνσης: η ίδια καταγραφή με άλλη κλιμάκωση είναι άλλη διέγερση.
+
+Αποθηκεύεται **όλο το πλέγμα**, όχι μόνο τα βέλτιστα: κριτήριο (RMS, u_max, διαδρομή),
+εύρος m̂ και προσαρμογή εξισώσεων αλλάζουν χωρίς νέες αναλύσεις, και ένα πυκνότερο πλέγμα
+τρέχει μόνο τα νέα σημεία.
+
+Χώρος για χρονοϊστορίες: ≈ 10 kB ανά ανάλυση για το El Centro, ≈ 220 kB για καταγραφή
+37 500 σημείων (≈ 60 MB και ≈ 1.3 GB ανά αναζήτηση 6000 αναλύσεων). Γι' αυτό στην
+εφαρμογή είναι επιλογή (προεπιλογή: ναι) και στο batch script σημαία `--histories`
+(προεπιλογή: όχι). Μια χρονοϊστορία που δεν αποθηκεύτηκε ξανατρέχει σε κλάσματα του
+δευτερολέπτου όταν τη ζητήσεις.
+
+### Πολλές διεγέρσεις (π.χ. όλο το `aug26/GM_X`, μέσα στη νύχτα)
+
+```bash
+uv run --project .. python -X utf8 run_optimum_batch.py                  # όλα τα GM_X
+uv run --project .. python -X utf8 run_optimum_batch.py --pga 0.36       # κλιμακωμένα σε 0.36 g
+uv run --project .. python -X utf8 run_optimum_batch.py elcentro --xi 0.05 --histories
+uv run --project .. python -X utf8 run_optimum_batch.py --help           # όλες οι επιλογές
+```
+
+Τρέχει παράλληλα (προεπιλογή: πυρήνες − 1). Αν διακοπεί (Ctrl+C), ξανατρέχεις την ίδια
+εντολή και συνεχίζει από εκεί που έμεινε. Τα αποτελέσματα φαίνονται στην εφαρμογή,
+«Παραμετρική» → «Εύρεση Βέλτιστων» → «Αποθηκευμένες αναζητήσεις».
+
+### Ανάγνωση με pandas
+
+```python
+import sqlite3, pandas as pd
+db = sqlite3.connect("results_db/tmd_results.sqlite")
+pd.read_sql("SELECT * FROM searches", db)                       # τι έχει τρέξει
+pd.read_sql("SELECT * FROM runs WHERE exc_id = ? AND xi = 0.02", db, params=[exc_id])
+```
+
+ή με το `store.ResultStore()` και το `optimum.grid_search(..., store=...)`, που επιστρέφει
+τον ίδιο πίνακα χωρίς νέες αναλύσεις αν όλα είναι αποθηκευμένα.

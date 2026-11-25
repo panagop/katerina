@@ -50,12 +50,27 @@ def compare(baseline: Response, controlled: Response, ss_fraction: float = 0.2) 
     base = compute_metrics(baseline, ss_fraction)
     ctrl = compute_metrics(controlled, ss_fraction)
     tmd = controlled.tmd
+    return compare_metrics(
+        controlled.excitation.name,
+        tmd.m_hat if tmd else 0.0,
+        tmd.f if tmd else np.nan,
+        tmd.ξd if tmd else np.nan,
+        base,
+        ctrl,
+    )
 
+
+def compare_metrics(name: str, m_hat: float, f: float, ξd: float,
+                    base: Metrics, ctrl: Metrics) -> dict:
+    """
+    Η γραμμή σύγκρισης του `compare`, από έτοιμα Metrics (π.χ. αποθηκευμένα στο
+    store.py), χωρίς να ξανατρέξει η ανάλυση.
+    """
     row = {
-        "διέγερση": controlled.excitation.name,
-        "m_hat": tmd.m_hat if tmd else 0.0,
-        "f": tmd.f if tmd else np.nan,
-        "ξd": tmd.ξd if tmd else np.nan,
+        "διέγερση": name,
+        "m_hat": m_hat,
+        "f": f,
+        "ξd": ξd,
         "u_max_χωρίς": base.u_max,
         "u_max_με": ctrl.u_max,
         "μείωση_u_max_%": reduction(base.u_max, ctrl.u_max),

@@ -11,3 +11,6 @@ wheels/
 
 # Αρχεία κλειδώματος του Excel/Word
 ~$*
+
+# Βάση αποτελεσμάτων (tmd_parametric/store.py): μόνο τοπικά, δεν μπαίνει στο git
+results_db/

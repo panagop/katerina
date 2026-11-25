@@ -64,7 +64,19 @@ folder; `.vscode/settings.json` sets `python.terminal.executeInFileDir`.
   parametric studies. See its own `README.md`. Modules: `structure.py`,
   `excitation.py`, `analysis.py`, `results.py`, `plots.py`, drivers
   `run_single.py` and `run_parametric.py`. Outputs go to `figures/` and
-  `results/`.
+  `results/`. Stored results: `store.py` (`ResultStore`), `optimum.py`
+  (`grid_search`, computes only grid points missing from the store),
+  `run_optimum_batch.py` (many records, `multiprocessing`, resumable). Tests:
+  `uv run pytest tmd_parametric/tests`.
+- **`results_db/`** (git-ignored, local only) — `tmd_results.sqlite` (tables
+  `excitations`, `baselines`, `runs`, `searches`; keys rounded to 6 decimals;
+  `MODEL_VERSION` in `store.py` — bump it if the model, integrator or metrics
+  change) and optional `histories/<exc_id>.h5` (float32 u and stroke per run).
+  `exc_id` = hash of dt + acceleration values in m/s². Tests use a temp folder
+  via `TMD_RESULTS_DIR` (set in `tmd_app/tests/conftest.py`). A spawned
+  `multiprocessing.Pool` hangs after `AppTest` has run in the same process
+  (AppTest replaces `__main__`), so the parallel test runs the batch script in a
+  subprocess; the app itself never uses the pool.
 - **`tmd_app/`** — Streamlit app over `tmd_parametric/` (`streamlit_app.py`,
   `core.py`, pages in `app_pages/`, AppTest tests in `tests/`:
   `uv run pytest tmd_app/tests`). Katerina added the «Εύρεση Βέλτιστων» tab in

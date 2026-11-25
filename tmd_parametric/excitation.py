@@ -6,6 +6,7 @@
 εφαρμόζεται εδώ, κατά την ανάγνωση, και όχι μέσα στο μοντέλο.
 """
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -57,6 +58,75 @@ def load_from_file(path, name=None, factor=1.0, unit_label="Επιτάχυνση
         a=data[:, 1] * factor,
         unit_label=unit_label,
     )
+
+
+# Γραμμή NPTS/DT των αρχείων PEER NGA .AT2, στις δύο μορφές που κυκλοφορούν:
+#   "NPTS=   2000, DT=   .0050 SEC"   (NGA-West2, επικεφαλίδα στην αρχή)
+#   "2000    0.0050    NPTS, DT"      (παλαιότερα NGA, επικεφαλίδα στην αρχή ή στο τέλος)
+# Ίδια λογική με το Accelerogram.ParsePeerAt2 της βιβλιοθήκης STREX (C#).
+_PEER_NPTS_DT = re.compile(r"NPTS\s*=\s*(\d+)\s*,\s*DT\s*=\s*([\d.Ee+\-]+)", re.IGNORECASE)
+_PEER_NPTS_DT_POS = re.compile(r"^(\d+)\s+([\d.Ee+\-]+)\s+NPTS\s*,\s*DT\b", re.IGNORECASE)
+
+
+def _is_numeric_line(line: str) -> bool:
+    parts = line.split()
+    if not parts:
+        return False
+    try:
+        for p in parts:
+            float(p)
+    except ValueError:
+        return False
+    return True
+
+
+def parse_peer_at2(text: str):
+    """
+    Αρχείο PEER NGA .AT2 (τιμές σε g).
+
+    Η επικεφαλίδα 4 γραμμών (τίτλος βάσης· σεισμός, σταθμός, συνιστώσα· μονάδες·
+    NPTS και DT) είναι συνήθως στην αρχή, αλλά σε κάποιες συλλογές (π.χ. aug26/GM_X)
+    είναι στο τέλος. Διαβάζονται και οι δύο μορφές· τα dt και NPTS από την επικεφαλίδα.
+
+    Επιστρέφει (dt, a).
+    """
+    lines = [line.strip() for line in text.splitlines()]
+
+    npts_line, npts, dt = -1, 0, 0.0
+    for i, line in enumerate(lines):
+        m = _PEER_NPTS_DT.search(line) or _PEER_NPTS_DT_POS.match(line)
+        if m:
+            npts_line, npts, dt = i, int(m.group(1)), float(m.group(2))
+            break
+    if npts_line < 0:
+        raise ValueError("Αρχείο PEER .AT2: δεν βρέθηκε η γραμμή «NPTS=n, DT=t SEC» "
+                         "(ή «n t NPTS, DT») της επικεφαλίδας.")
+    if dt <= 0:
+        raise ValueError("Αρχείο PEER .AT2: το DT της επικεφαλίδας δεν είναι θετικός αριθμός.")
+
+    # Η επικεφαλίδα είναι οι γραμμές κειμένου που τελειώνουν στη γραμμή NPTS
+    header_start = npts_line
+    while (header_start > 0 and lines[header_start - 1]
+           and not _is_numeric_line(lines[header_start - 1])):
+        header_start -= 1
+
+    # Δεδομένα μετά την επικεφαλίδα (συνήθως) ή, αν δεν υπάρχουν, πριν από αυτήν (στο τέλος)
+    data = [line for line in lines[npts_line + 1:] if _is_numeric_line(line)]
+    if not data:
+        data = [line for line in lines[:header_start] if _is_numeric_line(line)]
+
+    a = np.array([float(v) for line in data for v in line.split()])
+    if len(a) < npts:
+        raise ValueError(f"Αρχείο PEER .AT2: η επικεφαλίδα δίνει NPTS = {npts}, "
+                         f"αλλά το αρχείο έχει μόνο {len(a)} τιμές.")
+    return dt, a[:npts]  # τυχόν συμπληρωματικά μηδενικά μετά το τελευταίο σημείο
+
+
+def load_peer_at2(path, name=None, scale=1.0) -> Excitation:
+    """Αρχείο PEER .AT2 (τιμές σε g) -> Excitation σε m/s^2, με προαιρετική κλιμάκωση."""
+    path = Path(path)
+    dt, a = parse_peer_at2(path.read_text(encoding="utf-8", errors="replace"))
+    return Excitation(name=name or path.stem, dt=dt, a=a * G * scale)
 
 
 def elcentro(path=None) -> Excitation:

@@ -194,3 +194,29 @@ def test_about_page():
                      "Γεώργιος Παναγόπουλος"):
         assert expected in text
     assert "Φεβρουάριος 2027" in [c.value for c in at.caption]
+
+
+# --------------------------------------------------------------------------
+# Αποθηκευμένα αποτελέσματα (results_db σε προσωρινό φάκελο, βλ. conftest.py)
+# --------------------------------------------------------------------------
+
+def test_optimum_search_second_run_reuses_everything():
+    at = open_page("app_pages/parametric.py")
+    _run_optimum_search(at)
+    _run_optimum_search(at)
+    assert any("(64 από 64 ήδη αποθηκευμένες)" in i.value for i in at.info), \
+        [i.value for i in at.info]
+
+
+def test_stored_search_loads_without_running():
+    at = open_page("app_pages/parametric.py")
+    _run_optimum_search(at)
+    expected = at.session_state["opt_result"][0]
+    at = open_page("app_pages/parametric.py")  # νέα συνεδρία, χωρίς αποτελέσματα
+    assert "opt_result" not in at.session_state
+    at.button(key="opt_load").click().run()
+    assert not at.exception, at.exception
+    loaded, label, xi, _, _ = at.session_state["opt_result"]
+    assert label == "El Centro" and xi == pytest.approx(0.02)
+    assert loaded.equals(expected)
+    assert "Σχετική διαδρομή TMD" in [s.value for s in at.subheader]
