@@ -173,3 +173,15 @@ def test_normalization_finds_all_records():
     assert any("(149 συνολικά)" in m.value for m in at.markdown)
     # Η επίσκεψη στη σελίδα δεν αλλάζει τη διέγερση της ανάλυσης
     assert at.session_state["excitation_spec"] == {"kind": "elcentro"}
+
+
+def test_optimum_search_xi_defaults_to_model_xi():
+    label = "Απόσβεση Κτιρίου ξ (π.χ. 0.05 για 5%)"
+    at = open_page("app_pages/parametric.py")
+    assert next(w for w in at.number_input if w.label == label).value == pytest.approx(0.02)
+    _run_optimum_search(at)
+    _, _, saved_xi, opt_structure, _ = at.session_state["opt_result"]
+    assert saved_xi == opt_structure.ξ == pytest.approx(0.02)
+    # Αλλαγή του ξ στη σελίδα της κατασκευής -> νέα προεπιλογή εδώ
+    at = open_page("app_pages/parametric.py", xi=0.05)
+    assert next(w for w in at.number_input if w.label == label).value == pytest.approx(0.05)

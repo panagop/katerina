@@ -262,7 +262,11 @@ with tab_opt:
 
     with st.form("opt_search_form"):
         st.markdown("**Γενική Παράμετρος Κτιρίου**")
-        user_xi = st.number_input("Απόσβεση Κτιρίου ξ (π.χ. 0.05 για 5%)", value=0.05, min_value=0.00, max_value=0.20, step=0.01, format="%.2f")
+        # Προεπιλογή: το ξ της σελίδας «Κατασκευή & TMD», ώστε τα αποτελέσματα να
+        # συμφωνούν με τις άλλες σελίδες. Μπορεί να αλλάξει εδώ μόνο για την αναζήτηση.
+        user_xi = st.number_input("Απόσβεση Κτιρίου ξ (π.χ. 0.05 για 5%)", value=float(structure.ξ),
+                                  min_value=0.00, max_value=0.20, step=0.005, format="%.3f",
+                                  help=f"Προεπιλογή το ξ = {structure.ξ:g} της σελίδας «Κατασκευή & TMD».")
         
         st.divider() 
         
@@ -294,7 +298,12 @@ with tab_opt:
         x_vals = np.linspace(opt_x_lo, opt_x_hi, int(opt_x_n))
         
         total_runs = len(m_vals) * len(f_vals) * len(x_vals)
-        st.info(f"Εκτέλεση {total_runs} αναλύσεων με απόσβεση κτιρίου ξ = {user_xi:.2f}...")
+        st.info(f"Εκτέλεση {total_runs} αναλύσεων με απόσβεση κτιρίου ξ = {user_xi:g}...")
+        if user_xi != structure.ξ and st.session_state.excitation_spec["kind"] == "harmonic":
+            # Το πλάτος της αρμονικής (2ξk/m) υπολογίστηκε με το ξ της κατασκευής
+            st.warning(f"Η αρμονική διέγερση έχει πλάτος 2ξk/m με ξ = {structure.ξ:g} (σελίδα "
+                       f"«Κατασκευή & TMD»), ενώ η αναζήτηση γίνεται με ξ = {user_xi:g}: η "
+                       "απόκριση χωρίς TMD στον συντονισμό δεν θα είναι 1.00 m.")
         bar = st.progress(0.0, text="Αναζήτηση βέλτιστων...")
         
         baseline = core.analyse(temp_structure, ground)
@@ -344,7 +353,7 @@ with tab_opt:
     stored_opt = st.session_state.get("opt_result")
     if stored_opt is not None:
         df_opt, label, saved_xi, opt_structure, opt_ground = stored_opt
-        st.success(f"Η αναζήτηση ολοκληρώθηκε για τη διέγερση: {label} (με ξ = {saved_xi:.2f})")
+        st.success(f"Η αναζήτηση ολοκληρώθηκε για τη διέγερση: {label} (με ξ = {saved_xi:g})")
         # Αν άλλαξε η κατασκευή ή η διέγερση μετά την αναζήτηση, προειδοποίηση
         same_structure = (opt_structure.m, opt_structure.T) == (structure.m, structure.T)
         same_ground = (opt_ground.name == ground.name and opt_ground.dt == ground.dt
@@ -386,6 +395,8 @@ with tab_opt:
         # --- 2. ΕΜΦΑΝΙΣΗ ΕΞΙΣΩΣΕΩΝ LATEX ---
         st.divider()
         st.markdown("### 📈 Εμπειρικές Εξισώσεις (Προσαρμογή Curve Fit)")
+        st.caption(f"Ισχύουν για απόσβεση κτιρίου ξ = {saved_xi:g}, διέγερση {label} και "
+                   f"m̂ από {df_opt['m̂'].min():g} έως {df_opt['m̂'].max():g}.")
         
         if fit_success:
             def format_f_eq(p):
